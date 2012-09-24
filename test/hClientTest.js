@@ -73,6 +73,8 @@ describe('hClient XMPP Connection', function(){
     describe('#FilterMessage()', function(){
         var cmdMsg, hMsg;
         var activeChan = config.getNewCHID();
+        var filterName = config.db.createPk();
+        var filterName2 = config.db.createPk();
 
         before(function(done){
             hClient.once('connect', done);
@@ -105,6 +107,8 @@ describe('hClient XMPP Connection', function(){
 
             hMsg = config.makeHMessage(activeChan, config.logins[0].jid, undefined, {})
             hMsg.priority = 1;
+
+            //hClient.processMsgInternal(cmdMsg, function(){});
         })
 
         it('should return Ok', function(done){
@@ -128,7 +132,7 @@ describe('hClient XMPP Connection', function(){
     })
 
     describe('#processMsgInternal()', function(){
-        var cmdMsg;
+        var cmdMsg, hMsg;
 
         before(function(done){
             hClient.once('connect', done);
