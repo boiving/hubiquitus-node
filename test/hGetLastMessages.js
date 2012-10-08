@@ -97,7 +97,7 @@ describe('hGetLastMessages', function(){
 
     describe('Test with messages published',function() {
 
-        for(var i = 0; i < 11; i++) {
+        for(var i = 0; i < 10; i++) {
             var count = 0;
             var date = new Date(100000 + i * 100000);
             DateTab.push(date);
@@ -234,6 +234,87 @@ describe('hGetLastMessages', function(){
                 hMessage.payload.should.have.property('result').and.be.an.instanceof(Array).with.lengthOf(length);
                 done();
             });
+        })
+
+        describe('#FilterMessage()', function(){
+            var setMsg;
+            var hClientConst = require('../lib/hClient.js').hClient;
+            var hClient = new hClientConst(config.cmdParams);
+
+            before(function(done){
+                hClient.once('connect', done);
+                hClient.connect(config.logins[0]);
+            })
+            after(function(done){
+                hClient.once('disconnect', done);
+                hClient.disconnect();
+            })
+
+            before(function(){
+                for(var i = 0; i < 5; i++) {
+                    var count = 0;
+                    var date = new Date(100000 + i * 100000);
+                    DateTab.push(date);
+                    config.publishMessage(config.logins[0].jid, existingCHID, undefined, undefined,DateTab[count], true, {author:'u2@localhost'}, function(){});
+                    count++;
+                }
+            })
+
+            beforeEach(function(){
+                setMsg = config.makeHMessage('hnode@' + hClient.serverDomain, config.logins[0].jid, 'hCommand',{});
+                setMsg.payload = {
+                    cmd : 'hSetFilter',
+                    params : {
+                        filter: {}
+                    }
+                };
+            })
+
+            it('should return Ok with default messages of channel if not specified and message respect filter', function(done){
+                delete cmd.payload.params.nbLastMsg;
+                setMsg.payload.params.filter = {
+                    in:{publisher: ['u1@localhost']}
+                }
+                hClient.processMsgInternal(setMsg, function(){});
+                hClient.processMsgInternal(cmd, function(hMessage){
+                    hMessage.should.have.property('type', 'hResult');
+                    hMessage.payload.should.have.property('status', status.OK);
+                    hMessage.payload.should.have.property('result').and.be.an.instanceof(Array).with.lengthOf(10);
+                    done();
+                });
+            })
+
+            it('should return Ok with only filtered messages with right quantity', function(done){
+                cmd.payload.params.nbLastMsg = 3;
+                setMsg.payload.params.filter = {
+                    in:{author: ['u2@localhost']}
+                }
+                hClient.processMsgInternal(setMsg, function(){});
+                hClient.processMsgInternal(cmd, function(hMessage){
+                    hMessage.should.have.property('type', 'hResult');
+                    hMessage.payload.should.have.property('status', status.OK);
+                    hMessage.payload.should.have.property('result').and.be.an.instanceof(Array).with.lengthOf(3);
+                    for(var i = 0; i < hMessage.payload.result.length; i++)
+                        hMessage.payload.result[i].should.have.property('author', 'u2@localhost');
+                    done();
+                });
+            })
+
+            it('should return Ok with only filtered messages with less quantity if demanded does not exist.', function(done){
+                cmd.payload.params.nbLastMsg = 1000;
+                setMsg.payload.params.filter = {
+                    in:{author: ['u2@localhost']}
+                }
+                hClient.processMsgInternal(setMsg, function(){});
+                hClient.processMsgInternal(cmd, function(hMessage){
+                    hMessage.should.have.property('type', 'hResult');
+                    hMessage.payload.should.have.property('status', status.OK);
+                    hMessage.payload.should.have.property('result').and.be.an.instanceof(Array).with.lengthOf(5);
+                    for(var i = 0; i < hMessage.payload.result.length; i++)
+                        hMessage.payload.result[i].should.have.property('author', 'u2@localhost');
+                    done();
+                });
+            })
         })
     })
 })
