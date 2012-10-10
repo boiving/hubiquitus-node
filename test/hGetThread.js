@@ -240,9 +240,7 @@ describe('hGetThread', function(){
             filterCmd.msgid = 'testCmd';
             filterCmd.payload = {
                 cmd : 'hSetFilter',
-                params : {
-                    filter:{eq: {type: 'a type'}}
-                }
+                params : {eq: {type: 'a type'}}
             };
             hClient.processMsgInternal(filterCmd, function(hMessage){
                 hMessage.payload.should.have.property('status', status.OK);

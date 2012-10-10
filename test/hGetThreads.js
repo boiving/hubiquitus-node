@@ -230,9 +230,7 @@ describe('hGetThreads', function(){
             filterCmd.msgid = 'testCmd';
             filterCmd.payload = {
                 cmd : 'hSetFilter',
-                params : {
-                    filter: {eq:{priority: 3}}
-                }
+                params : {eq:{priority: 3}}
             };
             hClient.processMsgInternal(filterCmd, function(hMessage){
                 hMessage.payload.should.have.property('status', status.OK);

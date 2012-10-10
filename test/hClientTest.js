@@ -818,9 +818,9 @@ describe('hClient XMPP Connection', function(){
                 cmdMsg.payload.params.filter = {
                     nor: [
                         {in:{publisher:['u2@localhost', 'u3@localhost']}},
-                        {in:{author:['u2@localhost', 'u1@localhost']}}
+                        {nin:{author:['u2@localhost', 'u1@localhost']}}
                     ]};
-                hMsg.author = 'u1@localhost';
+                hMsg.author = 'u3@localhost';
                 hClient.processMsgInternal(cmdMsg, function(){});
                 hClient.processMsgInternal(hMsg, function(hMessage){
                     hMessage.should.have.property('type', 'hResult');

@@ -62,9 +62,7 @@ describe('hSetFilter', function(){
         cmd.msgid = 'testCmd';
         cmd.payload = {
             cmd : 'hSetFilter',
-            params : {
-                filter: {}
-            }
+            params : {}
         };
     })
 
@@ -77,7 +75,7 @@ describe('hSetFilter', function(){
     })
 
     it('should return hResult INVALID_ATTR if params filter is not an object', function(done){
-        cmd.payload.params.filter = 'a string';
+        cmd.payload.params = 'a string';
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
@@ -86,16 +84,17 @@ describe('hSetFilter', function(){
     })
 
     it('should return hResult INVALID_ATTR if filter does not start with a correct operand', function(done){
-        cmd.payload.params.filter = {bad:{attribut:true}};
+        cmd.payload.params = {bad:{attribut:true}};
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'A filter must start with a valid operand');
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand eq/ne/lt/lte/gt/gte/in/nin is not an object', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             eq:'string',
             ne:'string',
             lt:'string',
@@ -108,12 +107,13 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'The attribute of an operand eq must be an object');
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand and/or/nor is not an array', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             and:{attribut:false},
             or:{attribut:false},
             nor:{attribut:false}
@@ -121,12 +121,13 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'The attribute must be an array with at least 2 elements');
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand and/or/nor is an array of 1 element', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             and:[{attribut:false}],
             or:[{attribut:false}],
             nor:[{attribut:false}]
@@ -134,45 +135,49 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'The attribute must be an array with at least 2 elements');
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand not is an valid object', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             not:[{attribut:false}]
         };
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'The attribute of an operand "not" must be an object');
             done();
         });
     })
 
-    it('should return hResult INVALID_ATTR if filter with operand not contain valid operand', function(done){
-        cmd.payload.params.filter = {
+    it('should return hResult INVALID_ATTR if filter with operand "not" not contain valid operand', function(done){
+        cmd.payload.params = {
             not:{bad:{attribut:false}}
         };
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'A filter must start with a valid operand')
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand relevant is not a boolean', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             relevant:'string'
         };
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'The attribute of an operand "relevant" must be a boolean')
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand geo have not attribut radius', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             geo:{
                 lat:12,
                 lng:24
@@ -181,12 +186,13 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'Attributes of an operand "geo" must be numbers')
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand geo have not attribut lat', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             geo:{
                 lng:24,
                 radius:10000
@@ -195,12 +201,13 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'Attributes of an operand "geo" must be numbers')
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if filter with operand geo have not attribut lng', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             geo:{
                 lat:12,
                 radius:10000
@@ -209,12 +216,13 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'Attributes of an operand "geo" must be numbers')
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if attribut lat of filter geo is not a number', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             geo:{
                 lat:'string',
                 lng:24,
@@ -224,12 +232,13 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'Attributes of an operand "geo" must be numbers')
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if attribut lng of filter geo is not a number', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             geo:{
                 lat:12,
                 lng:'string',
@@ -239,12 +248,13 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'Attributes of an operand "geo" must be numbers')
             done();
         });
     })
 
     it('should return hResult INVALID_ATTR if attribut lat of filter geo is not a number', function(done){
-        cmd.payload.params.filter = {
+        cmd.payload.params = {
             geo:{
                 lat:12,
                 lng:24,
@@ -254,6 +264,7 @@ describe('hSetFilter', function(){
         hClient.processMsgInternal(cmd, function(hMessage){
             hMessage.should.have.property('ref', cmd.msgid);
             hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            hMessage.payload.should.have.property('result', 'Attributes of an operand "geo" must be numbers')
             done();
         });
     })

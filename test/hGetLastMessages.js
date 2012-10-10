@@ -264,15 +264,13 @@ describe('hGetLastMessages', function(){
                 setMsg = config.makeHMessage('hnode@' + hClient.serverDomain, config.logins[0].jid, 'hCommand',{});
                 setMsg.payload = {
                     cmd : 'hSetFilter',
-                    params : {
-                        filter: {}
-                    }
+                    params : {}
                 };
             })
 
             it('should return Ok with default messages of channel if not specified and message respect filter', function(done){
                 delete cmd.payload.params.nbLastMsg;
-                setMsg.payload.params.filter = {
+                setMsg.payload.params = {
                     in:{publisher: ['u1@localhost']}
                 }
                 hClient.processMsgInternal(setMsg, function(){});
@@ -286,7 +284,7 @@ describe('hGetLastMessages', function(){
 
             it('should return Ok with only filtered messages with right quantity', function(done){
                 cmd.payload.params.nbLastMsg = 3;
-                setMsg.payload.params.filter = {
+                setMsg.payload.params = {
                     in:{author: ['u2@localhost']}
                 }
                 hClient.processMsgInternal(setMsg, function(){});
@@ -302,7 +300,7 @@ describe('hGetLastMessages', function(){
 
             it('should return Ok with only filtered messages with less quantity if demanded does not exist.', function(done){
                 cmd.payload.params.nbLastMsg = 1000;
-                setMsg.payload.params.filter = {
+                setMsg.payload.params = {
                     in:{author: ['u2@localhost']}
                 }
                 hClient.processMsgInternal(setMsg, function(){});
