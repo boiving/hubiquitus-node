@@ -690,7 +690,7 @@ describe('hClient XMPP Connection', function(){
             it('should return INVALID_ATTR if the "and" attribute is not a array', function(done){
                 cmdMsg.payload.params.filter = {
                     and: {
-                        in:{publisher:['u2@localhost', 'u1@localhost']},
+                        in:{publisher:['u2@localhost', 'u3@localhost']},
                         nin:{attribut:['u2@localhost', 'u1@localhost']}
                     }};
                 hClient.processMsgInternal(cmdMsg, function(){});
@@ -768,7 +768,7 @@ describe('hClient XMPP Connection', function(){
             it('should return INVALID_ATTR if the "or" attribute is not a array', function(done){
                 cmdMsg.payload.params.filter = {
                     or: {
-                        in:{publisher:['u2@localhost', 'u1@localhost']},
+                        in:{publisher:['u2@localhost', 'u3@localhost']},
                         nin:{attribut:['u2@localhost', 'u1@localhost']}
                     }};
                 hClient.processMsgInternal(cmdMsg, function(){});
@@ -835,6 +835,7 @@ describe('hClient XMPP Connection', function(){
                         in:{publisher:['u2@localhost', 'u1@localhost']},
                         nin:{attribut:['u2@localhost', 'u1@localhost']}
                     }};
+                hMsg.author = 'u3@localhost';
                 hClient.processMsgInternal(cmdMsg, function(){});
                 hClient.processMsgInternal(hMsg, function(hMessage){
                     hMessage.should.have.property('type', 'hResult');
