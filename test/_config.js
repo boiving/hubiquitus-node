@@ -227,6 +227,14 @@ exports.logins = [
     {
         jid: user1Jid + '/testRessource',
         password: user1Pass
+    },
+    {
+        jid: user2Jid,
+        password: user1Pass
+    },
+    {
+        jid: user2Jid + '/testRessource',
+        password: user1Pass
     }
 ];
 

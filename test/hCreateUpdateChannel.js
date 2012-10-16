@@ -111,7 +111,7 @@ describe('hCreateUpdateChannel', function(){
     })
 
     it('should return hResult error NOT_AUTHORIZED with using hAdminChannel as actor', function(done){
-        createCmd.payload.params.actor = 'hAdminChannel';
+        createCmd.payload.params.actor = '#hAdminChannel@localhost';
         hCommandController.execCommand(createCmd, function(hMessage){
             hMessage.should.have.property('ref', createCmd.msgid);
             hMessage.payload.should.have.property('status', status.NOT_AUTHORIZED);
