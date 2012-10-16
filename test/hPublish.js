@@ -322,7 +322,8 @@ describe('hPublish', function(){
     })
 
     it('should return hResult OK with location = hMessage if specified', function(done){
-        msg.location = { lng: '12345' };
+        msg.location = {};
+        msg.location.pos = { lng: '12345', lat: '13254' };
         hClient.processMsgInternal(msg, function(hMessage) {
             hMessage.payload.should.have.property('status', status.OK);
             hMessage.payload.result.should.have.property('location', msg.location);
@@ -331,7 +332,8 @@ describe('hPublish', function(){
     })
 
     it('should return hResult OK with location = hMessage if specified even if existing in channel', function(done){
-        msg.location = { lng: '12345' };
+        msg.location = {};
+        msg.location.pos = { lng: '12345', lat: '13254' };
         msg.actor = richChannel;
         hClient.processMsgInternal(msg, function(hMessage) {
             hMessage.payload.should.have.property('status', status.OK);
@@ -489,7 +491,8 @@ describe('hPublish', function(){
         msg.priority = 3;
         msg.relevance = new Date();
         msg.persistent = false;
-        msg.location = {lng: '123123'};
+        msg.location = {};
+        msg.location.pos = { lng: '12345', lat: '13254' };
         msg.author = 'a@b.com';
         msg.headers = { MAX_MSG_RETRIEVAL: 3, RELEVANCE_OFFSET: 5450};
         msg.payload = {};

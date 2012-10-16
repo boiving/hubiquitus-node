@@ -322,7 +322,8 @@ describe('hCreateUpdateChannel', function(){
         this.timeout(5000);
         createCmd.payload.params.chdesc = 'a';
         createCmd.payload.params.priority = 3;
-        createCmd.payload.params.location = {lng : 's'};
+        createCmd.payload.params.location =  {};
+        createCmd.payload.params.location.pos = {lng : 's'};
         createCmd.payload.params.headers = {key: 'value'};
         hCommandController.execCommand(createCmd, function(hMessage){
             hMessage.should.have.property('ref', createCmd.msgid);
