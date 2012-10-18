@@ -58,7 +58,7 @@ for example [hubiquitusjs](https://github.com/hubiquitus/hubiquitusjs).
 There are two ways to configure **Hubiquitus-Node**, you can pass command-line
 arguments when running it or use a config file. The options, their format, 
 their default values and their explanation can all be found in 
-[Options](https://github.com/hubiquitus/hubiquitus-node/wiki/Options).
+[Options](https://github.com/hubiquitus/hubiquitus-node/wiki/Options-v0.5).
 
 To use a config file you need only to pass one argument: `--config <path>`
 
