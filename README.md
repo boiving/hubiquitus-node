@@ -26,8 +26,6 @@ To use **Hubiquitus-Node**, you need Node.JS, NPM and an XMPP Server.
 To make it function correctly, the XMPP Server needs to have a `Component connection`
 configured.
 
-``` 
-
 ###Installation
 
 ```
