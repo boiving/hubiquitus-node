@@ -268,4 +268,13 @@ describe('hSetFilter', function(){
             done();
         });
     })
+
+    it('should return INVALID_ATTR if attribute boolean is not a boolean', function(done){
+        cmd.payload.params = {boolean: 'string'};
+        hClient.processMsgInternal(cmd, function(hMessage){
+            hMessage.should.have.property('type', 'hResult');
+            hMessage.payload.should.have.property('status', hResultStatus.INVALID_ATTR);
+            done();
+        });
+    })
 })
