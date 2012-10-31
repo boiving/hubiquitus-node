@@ -1,4 +1,3 @@
-message = require "./message"
 
 main = ->
 
@@ -14,7 +13,7 @@ main = ->
 
   # Transmitting any message from parent actor to child actor
   process.on "message" , (msg) ->
-    #console.log("Child process got message",message)
-    actor.emit "message", message.newMessage(msg)
+    #console.log("Child process got message",msg)
+    actor.emit "message", msg
 
 main()

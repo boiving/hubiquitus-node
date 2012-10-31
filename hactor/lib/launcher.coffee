@@ -1,6 +1,5 @@
 fs = require "fs"
 adapters = require "./adapters"
-{Message} = require "./message"
 {Actor} = require "./actor"
 os = require "os"
 _ = require "underscore"
@@ -13,33 +12,21 @@ main = ->
 
   engineId = "engine@localhost"
 
-  topology =
-    {
-      actor: engineId
-      type: "actor"
-      children: [
-        {
-          actor: "tracker"
-          type:"tracker"
-          method: "inproc"
-          broadcastUrl: "tcp://127.0.0.1:2998",
-          inboundAdapters: [ { type: "socket", url: "tcp://*:2997" } ]
-        },
-        {
-          actor: "dispatcher"
-          type: "dispatcher"
-          method: "inproc"
-          workers: { method: "fork", type: "actor", nb: 2 },
-          trackers: [ trackerId: "#{engineId}/tracker", trackerUrl: "tcp://127.0.0.1:2997", broadcastUrl: "tcp://127.0.0.1:2998" ]
-        }
-      ]
-    }
+  hTopology = `undefined`
+  try
+    hTopology = eval("(" + fs.readFileSync("../conf/conf.json", "utf8") + ")")
+  catch err
+    console.log "erreur : ",err
+  unless hTopology
+    console.log "No config file or malformated config file. Can not start bot"
+    process.exit 1
+
 
   mockActor = { actor: "process"+process.pid }
 
   # the engine is itself an actor
   #engine = new Engine aid: engineId
-  engine = createActor(topology)
+  engine = createActor(hTopology)
 
   engine.on "started", ->
     # getting a proxy on the engine (for testing purpose, direct calls are indeed an option here)

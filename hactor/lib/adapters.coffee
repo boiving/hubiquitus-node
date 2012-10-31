@@ -1,6 +1,8 @@
 url = require "url"
 zmq = require "zmq"
-message = require "./message"
+statuses = require("./codes").statuses
+errors = require("./codes").errors
+logger = require "winston"
 
 class Adapter
 
@@ -29,9 +31,10 @@ class SocketInboundAdapter extends InboundAdapter
   constructor: (props) ->
     super
     if props.url then @url = props.url else @url = "tcp://127.0.0.1:#{@genListenPort}"
+    @type = "socket"
     @sock = zmq.socket "pull"
     @sock.identity = "SocketIA_of_#{@owner.actor}"
-    @sock.on "message", (data) => @owner.emit "message", message.newMessage(JSON.parse(data))
+    @sock.on "message", (data) => @owner.emit "message", JSON.parse(data)
 
   start: ->
     unless @started
@@ -49,9 +52,10 @@ class LBSocketInboundAdapter extends InboundAdapter
   constructor: (props) ->
     super
     if props.url then @url = props.url else @url = "tcp://127.0.0.1:#{@genListenPort}"
+    @type = "lb_socket"
     @sock = zmq.socket "pull"
     @sock.identity = "LBSocketIA_of_#{@owner.actor}"
-    @sock.on "message", (data) => @owner.emit "message", message.newMessage(JSON.parse(data))
+    @sock.on "message", (data) => @owner.emit "message", JSON.parse(data)
 
   start: ->
     unless @started
@@ -71,10 +75,10 @@ class ChannelInboundAdapter extends InboundAdapter
     if props.url
     then @url = props.url
     else throw new Error("You must provide a channel url")
-
+    @type = "channel"
     @sock = zmq.socket "sub"
     @sock.identity = "ChannelIA_of_#{@owner.actor}"
-    @sock.on "message", (data) => @owner.emit "message", message.newMessage(JSON.parse(data))
+    @sock.on "message", (data) => @owner.emit "message", JSON.parse(data)
 
   start: ->
     unless @started
@@ -95,17 +99,25 @@ class SocketIOInboundAdapter extends InboundAdapter
     super
     if props.url
     then @url = props.url
-    else throw new Error("You must provide a channel url")
-
+    else throw new Error("You must provide a valid url")
+    @type = "sIO"
     @sock = require("socket.io").listen(8080) #Creates the HTTP server
     @sock.identity = "socket_ioIA_of_#{@owner.actor}"
 
-    @sock.on "connection", (socket) ->
+    @sock.on "connection", (socket) =>
       socket.on "hConnect", (data) ->
         console.log "received hConnect", data
+        socket.emit "hStatus",
+          status: statuses.CONNECTED
+          errorCode: errors.NO_ERROR
+        data.url = props.url
+        _this.owner.emit "connect", data
 
       socket.once "disconnect", ->
         console.log "received Disconnect"
+
+      socket.on "hMessage", (data) ->
+        _this.owner.emit "message", data
 
   start: ->
     unless @started
@@ -116,6 +128,11 @@ class SocketIOInboundAdapter extends InboundAdapter
     if @started
       @sock.close()
       super
+
+  send: (message) ->
+    @start() unless @started
+    console.log "sock : ",@socket
+    #@sock.emit JSON.stringify(message)
 
 
 class OutboundAdapter extends Adapter
@@ -179,9 +196,10 @@ class SocketOutboundAdapter extends OutboundAdapter
     @sock.identity = "SocketOA_of_#{@owner.actor}_to_#{@targetActorAid}"
 
   start:->
+    super
     @sock.connect @url
     @owner.log "#{@sock.identity} writing on #{@url}"
-    super
+
 
   stop: ->
     if @started
@@ -189,7 +207,9 @@ class SocketOutboundAdapter extends OutboundAdapter
 
   send: (message) ->
     @start() unless @started
-    @sock.send message.toJson()
+    console.log "state : ",@
+    console.log "send : ",message
+    @sock.send JSON.stringify(message)
 
 class LBSocketOutboundAdapter extends OutboundAdapter
 
@@ -213,7 +233,7 @@ class LBSocketOutboundAdapter extends OutboundAdapter
 
   send: (message) ->
     @start() unless @started
-    @sock.send message.toJson()
+    @sock.send JSON.stringify(message)
 
 class ChannelOutboundAdapter extends OutboundAdapter
 
@@ -237,7 +257,33 @@ class ChannelOutboundAdapter extends OutboundAdapter
 
   send: (message) ->
     @start() unless @started
-    @sock.send message.toJson()
+    @sock.send JSON.stringify(message)
+
+class SocketIOOutboundAdapter extends OutboundAdapter
+
+  constructor: (props) ->
+
+    super
+    console.log "props :", props
+    if props.url
+    then @url = props.url
+    else throw new Error("You must explicitely pass a valid url to a SocketIOOutboundAdapter")
+    @sock = props.socket
+    #@sock = require("socket.io").listen(8080)
+    @sock.identity = "Socket_ioOA_of_#{@owner.actor}"
+    @sock.emit "hMessage"
+
+  start:->
+    @owner.log "#{@sock.identity} streaming on #{@url}"
+    super
+
+  stop: ->
+    if @started
+      @sock.close()
+
+  send: (message) ->
+    @start() unless @started
+    @sock.emit JSON.stringify(message)
 
 exports.inboundAdapter = (type, props) ->
   switch type
@@ -265,6 +311,8 @@ exports.outboundAdapter = (type, props) ->
       new LBSocketOutboundAdapter(props)
     when "channel"
       new ChannelOutboundAdapter(props)
+    when "sIO"
+      new SocketIOOutboundAdapter(props)
     else
       throw new Error "Incorrect type '#{type}'"
 

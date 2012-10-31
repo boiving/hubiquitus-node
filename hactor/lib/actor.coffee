@@ -8,8 +8,8 @@ _ = require "underscore"
 #Hactor modules
 {OutboundAdapter} = require "./adapters"
 adapters = require "./adapters"
-message = require "./message"
-{Message} = require "./message"
+validator = require "./validator"
+db = require("./mongo.coffee").db
 
 _.mixin toDict: (arr, key) ->
   throw new Error('_.toDict takes an Array') unless _.isArray arr
@@ -29,8 +29,8 @@ class Actor extends EventEmitter
   STATUS_STOPPED = "stopped"
 
   # Commands
-  CMD_START = { command: "start" }
-  CMD_STOP = { command: "stop" }
+  CMD_START = { cmd: "start" }
+  CMD_STOP = { cmd: "stop" }
 
   # Constructor
   constructor: (props) ->
@@ -67,36 +67,48 @@ class Actor extends EventEmitter
       @state.outboundAdapters.push adapters.outboundAdapter(adapterProps.type, adapterProps)
 
     # registering callbacks on events
-    @on "message", (message) => @onMessage(message)
+    @on "message", (message) =>
+      @onMessage(message)
 
     # Adding children once started
     @on "started", ->
       _.forEach props.children, (childProps) =>
         @createChild childProps.type, childProps.method, childProps
 
-  onMessage: (message) ->
-    @log "onMessage :",message.toString()
+    @on "connect", (props) -> @onConnect(props)
+
+  onMessage: (hMessage) ->
+    @log "onMessage :",JSON.stringify(hMessage)
+    self = @
 
     #if _.isString(data) then message = new Message(JSON.stringify(data));
     try
-      if (message instanceof Message)
-        # TODO evaluate type instead of payload
-        if message.payload.command then @runCommand(message.payload.command) else @receive(message)
-      else @log "Invalid message type (ignoring)"
+      validator.validateHMessage hMessage, (err, result) ->
+        if err
+          console.log "hMessage not conform : ",result
+        else
+          if hMessage.payload.cmd then self.runCommand(hMessage.payload.cmd, hMessage.payload.parent) else self.receive(hMessage)
     catch error
       @log "An error occured while processing incoming message: "+error
 
-  runCommand: (command) ->
+  onConnect: (props) ->
+    # TODO : synchro client server ?
+    props.actor = props.publisher
+    @createChild("actor", "fork", props)
+
+  runCommand: (command, parent) ->
     #case of a command
     switch command
       when "start"
-        @start()
+        @start(parent)
       when "stop"
         @stop()
       else throw new Error "Invalid command"
 
   receive: (message) ->
-    @log "Message reveived: #{message.toString()}"
+    @log "Message reveived: #{JSON.stringify(message)}"
+    if message.type is "string"
+      @send message.publisher, 'msg', 'bien recu merci'
 
   lookup: (actor) ->
     unless _.isString(actor) then throw new Error "'aid' parameter must be a string"
@@ -106,10 +118,13 @@ class Actor extends EventEmitter
       @log "Not yet implemented (returning a fake)"
       new OutboundAdapter( targetActorAid: actor )
 
-  send: (to, type, payload) ->
+  send: (to, type, payload, options) ->
+    #console.log "actor : ",@actor
+    #console.log "in : ",@state.inboundAdapters
+    #console.log "out : ",@state.outboundAdapters
     outboundAdapter = @lookup to
-    msg = message.newMessage from: @actor, to: to, type: type, payload: payload
-    @log "Sending message: #{msg.toJson()}"
+    msg = @buildMessage(to, type, payload, options)
+    @log "Sending message: #{JSON.stringify(msg)}"
     outboundAdapter.send msg
 
   ###*
@@ -136,12 +151,12 @@ class Actor extends EventEmitter
         childRef = actorModule.newActor(props)
         @state.outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: props.actor , ref: childRef)
         # Starting the child
-        @send( props.actor, "cmd",  CMD_START)
+        @send( props.actor, "hCommand",  CMD_START)
       when "fork"
         childRef = forker.fork __dirname+"/childlauncher", [classname , JSON.stringify(props)]
         @state.outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: props.actor , ref: childRef)
         childRef.on "message", (msg) =>
-          if msg.state is 'ready' then @send( props.actor, "cmd", CMD_START)
+          if msg.state is 'ready' then @send( props.actor, "hCommand", CMD_START)
       else
         throw new Error "Invalid method"
 
@@ -164,7 +179,10 @@ class Actor extends EventEmitter
   touchTrackers: ->
     _.forEach @state.trackers, (trackerProps) =>
       @log "touching tracker #{trackerProps.trackerId}"
-      @send trackerProps.trackerId, "peer-info", peerId:@actor, peerStatus:@state.status
+      inboundAdapters = []
+      for i in @state.inboundAdapters
+        inboundAdapters.push {type:i.type, url:i.url}
+      @send trackerProps.trackerId, "peer-info", {peerId:@actor, peerStatus:@state.status, peerInbox:inboundAdapters}
 
   setStatus: (status) ->
     # alter the state
@@ -194,12 +212,65 @@ class Actor extends EventEmitter
     @setStatus STATUS_STOPPING
     # Stop children first
     _.forEach @state.children, (childAid) =>
-      @send childAid, "cmd", CMD_STOP
+      @send childAid, "hCommand", CMD_STOP
     # Stop adapters second
     _.invoke @state.inboundAdapters, "stop"
     _.invoke @state.outboundAdapters, "stop"
     @setStatus STATUS_STOPPED
     @removeAllListeners()
+
+  buildMessage: (actor, type, payload, options) ->
+    options = options or {}
+    hMessage = {}
+    throw new Error("missing actor")  unless actor
+    hMessage.actor = actor
+    hMessage.publisher = @actor
+    hMessage.ref = options.ref  if options.ref
+    hMessage.convid = options.convid  if options.convid
+    hMessage.type = type  if type
+    hMessage.priority = options.priority  if options.priority
+    hMessage.relevance = options.relevance  if options.relevance
+    if options.relevanceOffset
+      currentDate = new Date()
+      hMessage.relevance = new Date(currentDate.getTime() + options.relevanceOffset)
+    hMessage.persistent = options.persistent or true if options.persistent isnt null or options.persistent isnt `undefined`
+    hMessage.location = options.location  if options.location
+    hMessage.author = options.author  if options.author
+    hMessage.published = options.published  if options.published
+    hMessage.headers = options.headers  if options.headers
+    hMessage.payload = payload  if payload
+    hMessage.timeout = options.timeout  if options.timeout
+    hMessage
+
+  buildResult: (actor, ref, status, result) ->
+    hmessage = {}
+    hmessage.msgid = @makeMsgId()
+    hmessage.actor = actor
+    hmessage.convid = hmessage.msgid
+    hmessage.ref = ref
+    hmessage.type = "hResult"
+    hmessage.priority = 0
+    hmessage.publisher = @actor
+    hmessage.published = new Date()
+    hresult = {}
+    hresult.status = status
+    hresult.result = result
+    hmessage.payload = hresult
+    hmessage
+
+  ###
+  Create a unique message id from a client message id
+  Message id should follow the from clientMsgId#serverUniqueMsgId
+  If client message id contains #, it's removed
+
+  @param clientMsgId
+  ###
+  makeMsgId: (clientMsgId) ->
+    msgId = ""
+    try
+      msgId = clientMsgId.replace("#", "")
+    msgId += "#" + db.createPk()
+    msgId
 
 exports.Actor = Actor
 exports.newActor = (props) ->
