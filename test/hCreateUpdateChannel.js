@@ -49,7 +49,7 @@ describe('hCreateUpdateChannel', function(){
         }
     })
 
-    it('should return hResult error INVALID_ATTR without params', function(done){
+    /*it('should return hResult error INVALID_ATTR without params', function(done){
         createCmd.payload.params = null;
         hCommandController.execCommand(createCmd, function(hMessage){
             hMessage.should.have.property('ref', createCmd.msgid);
@@ -100,9 +100,10 @@ describe('hCreateUpdateChannel', function(){
         });
     })
 
-    it('should return hResult error INVALID_ATTR with actor with a different domain', function(done){
+    */it('should return hResult error INVALID_ATTR with actor with a different domain', function(done){
         createCmd.payload.params.actor = '#channel@another.domain';
         hCommandController.execCommand(createCmd, function(hMessage){
+            console.log(hMessage)
             hMessage.should.have.property('ref', createCmd.msgid);
             hMessage.payload.should.have.property('status', status.INVALID_ATTR);
             hMessage.payload.should.have.property('result').and.be.a('string');
@@ -110,7 +111,7 @@ describe('hCreateUpdateChannel', function(){
         });
     })
 
-    it('should return hResult error NOT_AUTHORIZED with using hAdminChannel as actor', function(done){
+    /*it('should return hResult error NOT_AUTHORIZED with using hAdminChannel as actor', function(done){
         createCmd.payload.params.actor = '#hAdminChannel@localhost';
         hCommandController.execCommand(createCmd, function(hMessage){
             hMessage.should.have.property('ref', createCmd.msgid);
@@ -401,5 +402,5 @@ describe('hCreateUpdateChannel', function(){
             });
         })
 
-    })
+    })*/
 })

@@ -28,13 +28,13 @@ describe('hAdmin XMPP Connection', function(){
     var hAdmin = config.xmppConnection;
 
     before(function(done){
-        var db = require('../lib/mongo.js').db;
+        var db = require('../lib/dbPool.js').db.getDb("test");
         db.once('connect', done);
         db.connect(config.mongoURI);
     })
 
     after(function(done){
-        var db = require('../lib/mongo.js').db;
+        var db = require('../lib/dbPool.js').db.getDb("test");
         db.once('disconnect', done);
         db.disconnect();
     })

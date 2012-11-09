@@ -191,6 +191,20 @@ describe('hGetThread', function(){
         });
     })
 
+    it('should return hResult OK with an [] containing all messages with same convid sort newer to older when invalid params sort', function(done){
+        cmd.payload.params.sort = "hello"
+        hCommandController.execCommand(cmd, function(hMessage){
+            hMessage.should.have.property('ref', cmd.msgid);
+            hMessage.payload.should.have.property('status', status.OK);
+            hMessage.payload.result.should.be.an.instanceof(Array).and.have.lengthOf(publishedMessages);
+            var msg1 = new Date (hMessage.payload.result[0].published).getTime();
+            var msgX = new Date (hMessage.payload.result[publishedMessages-1].published).getTime();
+            var diff = msg1-msgX
+            diff.should.be.below(0)
+            done();
+        });
+    })
+
     it('should return hResult OK with an [] containing all messages with same convid sort newer to older', function(done){
         cmd.payload.params.sort = -1
         hCommandController.execCommand(cmd, function(hMessage){
