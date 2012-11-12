@@ -100,12 +100,11 @@ describe('hCreateUpdateChannel', function(){
         });
     })
 
-    it('should return hResult error INVALID_ATTR with actor with a different domain', function(done){
+    it('should return hResult error OK with actor with a different domain', function(done){
         createCmd.payload.params.actor = '#channel@another.domain';
         hCommandController.execCommand(createCmd, function(hMessage){
             hMessage.should.have.property('ref', createCmd.msgid);
-            hMessage.payload.should.have.property('status', status.INVALID_ATTR);
-            hMessage.payload.should.have.property('result').and.be.a('string');
+            hMessage.payload.should.have.property('status', status.OK);
             done();
         });
     })

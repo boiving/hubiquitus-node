@@ -51,15 +51,8 @@ function main(){
             process.exit();
         });
 
-    //Set listeners for Mongo errors/ connection
-    var db = require('./lib/mongo.js').db;
-    db.on('error', function(err){
-        log.error('Error Connecting to database', err);
-        process.exit(1);
-    });
-
-    //Start connection to Mongo
-    db.connect(opts.options['mongo.URI']);
+    //Set Mongo
+    //var db = require('./lib/dbPool.js').db;
 }
 
 main();

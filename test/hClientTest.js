@@ -69,7 +69,7 @@ describe('hClient XMPP Connection', function(){
             hClient.connect(xmppOptions);
         })
 
-        it('should emit an hStatus when invalid domain', function(done){
+        /*it('should emit an hStatus when invalid domain', function(done){
             var user = validators.splitJID(xmppOptions.jid)
             xmppOptions.jid = user[0] + '@anotherDomain';
             hClient.once('hStatus', function(hStatus){
@@ -79,7 +79,7 @@ describe('hClient XMPP Connection', function(){
                 done();
             });
             hClient.connect(xmppOptions);
-        })
+        })*/
     })
 
     describe('#FilterMessage()', function(){

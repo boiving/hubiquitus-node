@@ -9,7 +9,7 @@ var user1Pass = 'u1';
 var user2Jid = 'u2@localhost';
 var user2Pass = 'u2';
 
-var mongoURI = 'mongodb://localhost/test';
+var mongoURI = 'mongodb://localhost/localhost';
 
 var commandsPath = 'lib/hcommands'
 var commandsTimeout = 5000;
@@ -63,7 +63,7 @@ var cmdController = require('../lib/hcommand_controller.js').Controller;
 var hAdminConst = require('../lib/hAdmin.js');
 var winston = require('winston');
 
-var db = require('../lib/mongo.js').db;
+var db = require('../lib/dbPool.js').db.getDb("localhost");
 
 
 
