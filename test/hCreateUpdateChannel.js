@@ -103,6 +103,7 @@ describe('hCreateUpdateChannel', function(){
     it('should return hResult error OK with actor with a different domain', function(done){
         createCmd.payload.params.actor = '#channel@another.domain';
         hCommandController.execCommand(createCmd, function(hMessage){
+            console.log(hMessage)
             hMessage.should.have.property('ref', createCmd.msgid);
             hMessage.payload.should.have.property('status', status.OK);
             done();
