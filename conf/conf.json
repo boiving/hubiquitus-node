@@ -1,0 +1,36 @@
+{
+    "actor": "engine@localhost",
+    "type": "gateway",
+    "children": [
+        {
+            "actor": "tracker",
+            "type":"tracker",
+            "method": "inproc",
+            "broadcastUrl": "tcp://127.0.0.1:2998",
+            "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2997" } ]
+        },
+        {
+            "actor": "dispatcher",
+            "type": "dispatcher",
+            "method": "inproc",
+            "workers": { "method": "fork", "type": "actor", "nb": 2 },
+            "trackers": [
+                {
+                    "trackerId" : "engine@localhost/tracker",
+                    "trackerUrl" : "tcp://127.0.0.1:2997",
+                    "broadcastUrl" : "tcp://127.0.0.1:2998"
+                }
+            ],
+            "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2992" } ]
+        }
+    ],
+    "inboundAdapters": [ { "type": "socket", "url": "tcp://*:3993" } ],
+    "trackers": [
+        {
+            "trackerId" : "engine@localhost/tracker",
+            "trackerUrl" : "tcp://127.0.0.1:2997",
+            "broadcastUrl" : "tcp://127.0.0.1:2998"
+        }
+    ],
+    "sIOAdapters": [ { "type": "sIO", "port": 8080 } ]
+}
