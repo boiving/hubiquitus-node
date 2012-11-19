@@ -1,3 +1,28 @@
+#
+# * Copyright (c) Novedia Group 2012.
+# *
+# *    This file is part of Hubiquitus
+# *
+# *    Permission is hereby granted, free of charge, to any person obtaining a copy
+# *    of this software and associated documentation files (the "Software"), to deal
+# *    in the Software without restriction, including without limitation the rights
+# *    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+# *    of the Software, and to permit persons to whom the Software is furnished to do so,
+# *    subject to the following conditions:
+# *
+# *    The above copyright notice and this permission notice shall be included in all copies
+# *    or substantial portions of the Software.
+# *
+# *    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+# *    INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+# *    PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+# *    FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+# *    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+# *
+# *    You should have received a copy of the MIT License along with Hubiquitus.
+# *    If not, see <http://opensource.org/licenses/mit-license.php>.
+#
+
 #Node modules
 {EventEmitter} = require "events"
 forker = require "child_process"
@@ -88,7 +113,7 @@ class Actor extends EventEmitter
         @createChild childProps.type, childProps.method, childProps
 
   onMessage: (hMessage) ->
-    @log "onMessage :",JSON.stringify(hMessage)
+    @log "onMessage :"+JSON.stringify(hMessage)
     self = @
 
     #if _.isString(data) then message = new Message(JSON.stringify(data));
@@ -126,13 +151,13 @@ class Actor extends EventEmitter
     if outboundAdapter
       @sending(hMessage, cb, outboundAdapter)
     else
-      msg = @buildMessage(@state.trackers[0].trackerId, "peer-search", {actor:hMessage.actor}, {timeout:10000})
+      msg = @buildMessage(@state.trackers[0].trackerId, "peer-search", {actor:hMessage.actor}, {timeout:5000})
       @send msg, (hResult) =>
         if hResult.payload.status is codes.hResultStatus.OK
           outboundAdapter = adapters.outboundAdapter(hResult.payload.result.type, { targetActorAid: hResult.payload.result.targetActorAid, owner: @, url: hResult.payload.result.url })
           @sending(hMessage, cb, outboundAdapter)
         else
-          _this.log("Actor not found, can't send hMessage")
+          @log("Can't send hMessage : "+hResult.payload.result)
 
   sending: (hMessage, cb, outboundAdapter) ->
     #Complete hCommand
@@ -253,7 +278,7 @@ class Actor extends EventEmitter
           @send msg
       when STATUS_STOPPING
         @touchTrackers()
-        clearInterval(interval)
+        #clearInterval(interval)
     # advertise
     @emit status
     # Log
@@ -308,7 +333,7 @@ class Actor extends EventEmitter
     hMessage.timeout = options.timeout  if options.timeout
     hMessage
 
-  buildResult: (actor, ref, status, result) ->
+  buildResult: (actor, ref, status, result, flag) ->
     hmessage = {}
     hmessage.msgid = @makeMsgId()
     hmessage.actor = actor
@@ -321,6 +346,7 @@ class Actor extends EventEmitter
     hresult = {}
     hresult.status = status
     hresult.result = result
+    hresult.flag = flag
     hmessage.payload = hresult
     hmessage
 
