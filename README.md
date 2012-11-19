@@ -21,10 +21,19 @@ process increasing scalability!
 ## How to Install
 ### Dependencies
 
-To use **Hubiquitus-Node**, you need Node.JS, NPM and an XMPP Server.
+To use **Hubiquitus-Node**, you need Node.JS, NPM, mongoDb and an XMPP Server.
+
+To install correctly Node.JS you can use this [link](https://github.com/joyent/node/wiki/Installation)
+Note that you need at least v0.6.16
+
+To install correctly XMPP Server you can use for example ejabberd using `sudo apt-get install ejabberd`
+Once the installation is complete, you have to add an admin user `sudo ejabberdctl register admin localhost password`
+Then acces to the admin pannel at `http://localhost:5280/admin` and add any user you need.
 
 To make it function correctly, the XMPP Server needs to have a `Component connection`
 configured.
+
+To install correctly MongoDB database you can use `sudo apt-get install mongodb`
 
 ###Installation
 
@@ -73,17 +82,23 @@ Keys accepting arrays are specified by passing value1,value2,value3
 
 Copyright (c) Novedia Group 2012.
 
-This file is part of Hubiquitus.
+    This file is part of Hubiquitus
 
-Hubiquitus is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+    Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies
+of the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
 
-Hubiquitus is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+    The above copyright notice and this permission notice shall be included in all copies
+or substantial portions of the Software.
 
-You should have received a copy of the GNU General Public License
-along with Hubiquitus.  If not, see <http://www.gnu.org/licenses/>.
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE
+FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+    You should have received a copy of the MIT License along with Hubiquitus.
+If not, see <http://opensource.org/licenses/mit-license.php>.
