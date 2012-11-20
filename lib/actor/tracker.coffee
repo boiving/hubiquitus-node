@@ -37,13 +37,16 @@ class Tracker extends Actor
     @on "started", -> @pingChannel(props.broadcastUrl)
 
   receive: (message) ->
-    @log "Tracker received a message: #{JSON.stringify(message)}"
+    @log "debug", "Tracker received a message: #{JSON.stringify(message)}"
     if message.type is "peer-info"
       existPeer = false
       _.forEach @state.peers, (peers) =>
         if peers.peerID is message.payload.peerId
           existPeer = true
           peers.peerStatus = message.payload.peerStatus
+          peers.peerInbox = message.payload.peerInbox
+          if peers.peerStatus is "stopping"
+            @stopAlert(message.publisher)
       if existPeer isnt true
         @state.peers.push {peerType:message.payload.peerType, peerID:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
         outbox = @findOutbox(message.payload.peerId)
@@ -66,11 +69,11 @@ class Tracker extends Actor
 
 
   pingChannel: (broadcastUrl) ->
-    @log "Starting a channel broadcasting on #{broadcastUrl}"
-    trackerChannelAid = @createChild "channel", "inproc",
+    @log "debug", "Starting a channel broadcasting on #{broadcastUrl}"
+    @trackerChannelAid = @createChild "channel", "inproc",
       { actor: "channel", outboundAdapters: [ { type: "channel", url: broadcastUrl } ] }
     #interval = setInterval(=>
-    #    @send trackerChannelAid, "msg", "New event pusblished by tracker #{@actor}"
+    #    @send @buildMessage(@trackerChannelAid, "msg", "New event pusblished by tracker #{@actor}")
     #  , 3000)
     #@on "stopping", -> clearInterval(interval)
 
@@ -84,6 +87,10 @@ class Tracker extends Actor
               if inbox.type is "socket"
                 outboundadapter = {type: inbox.type, targetActorAid: actor, url: inbox.url}
     outboundadapter
+
+  stopAlert: (actor) ->
+    msg = @buildMessage(@trackerChannelAid, "hStopAlert", {actoraid:actor})
+    @send msg
 
 exports.Tracker = Tracker
 exports.newActor = (props) ->

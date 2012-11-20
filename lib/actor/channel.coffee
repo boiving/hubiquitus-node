@@ -26,6 +26,8 @@
 {Actor} = require "./actor"
 adapters = require "./../adapters"
 zmq = require "zmq"
+validator = require "./../validator"
+_ = require "underscore"
 
 class Channel extends Actor
 
@@ -34,11 +36,29 @@ class Channel extends Actor
     @type = "channel"
     @subscribersAlias = "#{@actor}#subscribers"
 
+  onMessage: (hMessage) ->
+    @log "debug", "onMessage :"+JSON.stringify(hMessage)
+
+    try
+      validator.validateHMessage hMessage, (err, result) =>
+        if err
+          @log "debug", "hMessage not conform : ",result
+        else
+          if hMessage.type is "hCommand" and hMessage.actor is @actor
+            @runCommand(hMessage)
+          else
+            @receive(hMessage)
+    catch error
+      @log "debug", "An error occured while processing incoming message: "+error
+
   receive: (message) ->
     # TODO persit the message if necessary
     #sends to all subscribers the message received
     message.publisher = @actor
-    @send @subscribersAlias, message.type, message.payload
+    @send @buildMessage(@subscribersAlias, message.type, message.payload)
+
+  initTrackers: (trackers) ->
+    return
 
 exports.Channel = Channel
 exports.newActor = (props) ->

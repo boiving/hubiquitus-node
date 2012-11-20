@@ -39,7 +39,7 @@ class Gateway extends Actor
       adapters.sIOAdapter(adapterProps)
 
   receive: (hMessage) ->
-    @log "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
+    @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
     @send hMessage
 
 

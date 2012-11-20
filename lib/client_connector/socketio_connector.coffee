@@ -25,7 +25,7 @@
 
 log = require("winston")
 clients = {}
-options = require("../options").sioConnector;
+options = require("../options").sioConnector
 
 class SocketIO_Connector
   ###

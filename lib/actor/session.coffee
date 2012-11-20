@@ -25,7 +25,6 @@
 
 {Actor} = require "./actor"
 zmq = require "zmq"
-log = require("winston")
 _ = require "underscore"
 statuses = require("../codes").statuses
 errors = require("../codes").errors
@@ -41,7 +40,9 @@ class Session extends Actor
 
   touchTrackers: ->
     _.forEach @state.trackers, (trackerProps) =>
-      @log "touching tracker #{trackerProps.trackerId}"
+      @log "debug", "touching tracker #{trackerProps.trackerId}"
+      if @state.status is "stopping"
+        @trackInbox = []
       msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:@trackInbox})
       @send(msg)
 
@@ -50,7 +51,7 @@ class Session extends Actor
       @hClient.socket.emit "hMessage", hMessage
     else
       hMessage.publisher = @actor
-      @log "Session received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
+      @log "debug", "Session received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
       @send hMessage
 
   initListener: (client) =>
@@ -70,7 +71,6 @@ class Session extends Actor
       @addSocketListeners client
 
     @on "disconnect", ->
-      console.log("here")
       @stop()
     #Start listening for messages from Session and relaying them
     #client.hClient.on "hMessage", (hMessage) ->
@@ -81,7 +81,7 @@ class Session extends Actor
 
   addSocketListeners: (client) =>
     client.socket.on "hMessage", (hMessage) =>
-      log.info "Client ID " + client.id + " sent hMessage", hMessage
+      @log "info", "Client ID " + client.id + " sent hMessage", hMessage
       @emit "message", hMessage
 
 exports.Session = Session

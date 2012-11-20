@@ -25,7 +25,6 @@
 
 url = require "url"
 zmq = require "zmq"
-logger = require "winston"
 
 class Adapter
 
@@ -63,7 +62,7 @@ class SocketInboundAdapter extends InboundAdapter
   start: ->
     unless @started
       @sock.bindSync @url
-      @owner.log "#{@sock.identity} listening on #{@url}"
+      @owner.log "debug", "#{@sock.identity} listening on #{@url}"
       super
 
   stop: ->
@@ -84,7 +83,7 @@ class LBSocketInboundAdapter extends InboundAdapter
   start: ->
     unless @started
       @sock.connect @url
-      @owner.log "#{@sock.identity} listening on #{@url}"
+      @owner.log "debug", "#{@sock.identity} listening on #{@url}"
       super
 
   stop: ->
@@ -109,7 +108,7 @@ class ChannelInboundAdapter extends InboundAdapter
     unless @started
       @sock.connect @url
       @sock.subscribe("")
-      @owner.log "#{@sock.identity} listening on #{@url}"
+      @owner.log "debug", "#{@sock.identity} subscribe on #{@url}"
       super
 
   stop: ->
@@ -180,7 +179,7 @@ class SocketOutboundAdapter extends OutboundAdapter
   start:->
     super
     @sock.connect @url
-    @owner.log "#{@sock.identity} writing on #{@url}"
+    @owner.log "debug", "#{@sock.identity} writing on #{@url}"
 
 
   stop: ->
@@ -204,7 +203,7 @@ class LBSocketOutboundAdapter extends OutboundAdapter
   start:->
 
     @sock.bindSync @url
-    @owner.log "#{@sock.identity} bound on #{@url}"
+    @owner.log "debug", "#{@sock.identity} bound on #{@url}"
     super
 
   stop: ->
@@ -229,7 +228,7 @@ class ChannelOutboundAdapter extends OutboundAdapter
 
   start:->
     @sock.bindSync @url
-    @owner.log "#{@sock.identity} streaming on #{@url}"
+    @owner.log "debug", "#{@sock.identity} streaming on #{@url}"
     super
 
   stop: ->

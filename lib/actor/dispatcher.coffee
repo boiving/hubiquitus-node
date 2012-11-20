@@ -40,8 +40,8 @@ class Dispatcher extends Actor
     @state.outboundAdapters.push adapters.outboundAdapter("lb_socket", { targetActorAid: @workersAlias, owner: @, url: dispatchingUrl })
     #@state.inboundAdapters.push adapters.inboundAdapter("lb_socket", { owner: @, url: dispatchingUrl })
     for i in [1..workerProps.nb]
-      @log "Adding a new worker #{i}"
-      @createChild workerProps.type, workerProps.method, actor: "worker#{i}", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }, {type: "channel", url: "tcp://*:2998"} ]
+      @log "debug", "Adding a new worker #{i}"
+      @createChild workerProps.type, workerProps.method, actor: "worker#{i}", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }], #{type: "channel", url: "tcp://*:2998"} ]
 
   receive: (message) ->
     @log "Dispatcher received a message to send to workers: #{JSON.stringify(message)}"

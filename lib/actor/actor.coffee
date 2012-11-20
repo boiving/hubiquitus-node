@@ -74,14 +74,7 @@ class Actor extends EventEmitter
     @state.outboundAdapters = []
 
     # Registering trackers
-    if _.isArray(props.trackers) and props.trackers.length > 0
-      _.forEach props.trackers, (trackerProps) =>
-        @log "registering tracker #{trackerProps.trackerId}"
-        @state.trackers.push trackerProps
-        #@state.inboundAdapters.push adapters.inboundAdapter("channel",  owner: @, url: trackerProps.broadcastUrl)
-        @state.outboundAdapters.push adapters.outboundAdapter("socket", {owner: @, targetActorAid: trackerProps.trackerId, url: trackerProps.trackerUrl})
-    else
-      @log "no tracker was provided"
+    @initTrackers(props.trackers)
 
     # Setting inbound adapters
     _.forEach props.inboundAdapters, (adapterProps) =>
@@ -91,7 +84,9 @@ class Actor extends EventEmitter
     # Setting outbound adapters
     _.forEach props.outboundAdapters, (adapterProps) =>
       adapterProps.owner = @
-      @state.outboundAdapters.push adapters.outboundAdapter(adapterProps.type, adapterProps)
+      outadapter = adapters.outboundAdapter(adapterProps.type, adapterProps)
+      @state.outboundAdapters.push outadapter
+      outadapter.start()
 
     # registering callbacks on events
     @on "message", (hMessage) =>
@@ -113,25 +108,25 @@ class Actor extends EventEmitter
         @createChild childProps.type, childProps.method, childProps
 
   onMessage: (hMessage) ->
-    @log "onMessage :"+JSON.stringify(hMessage)
-    self = @
+    @log "debug", "onMessage :"+JSON.stringify(hMessage)
 
-    #if _.isString(data) then message = new Message(JSON.stringify(data));
     try
       validator.validateHMessage hMessage, (err, result) =>
         if err
-          console.log "hMessage not conform : ",result
+          @log "debug", "hMessage not conform : ",result
         else
           if hMessage.type is "hCommand" and hMessage.actor is @actor
-            self.runCommand(hMessage.payload.cmd)
+            @runCommand(hMessage)
+          else if hMessage.type is "hStopAlert"
+            @removePeer(hMessage.payload.actoraid)
           else
-            self.receive(hMessage)
+            @receive(hMessage)
     catch error
-      @log "An error occured while processing incoming message: "+error
+      @log "debug", "An error occured while processing incoming message: "+error
 
-  runCommand: (command) ->
+  runCommand: (hMessage) ->
     #case of a command
-    switch command
+    switch hMessage.payload.cmd
       when "start"
         @start()
       when "stop"
@@ -139,10 +134,7 @@ class Actor extends EventEmitter
       else throw new Error "Invalid command"
 
   receive: (message) ->
-    @log "Message reveived: #{JSON.stringify(message)}"
-    if message.publisher is 'engine@localhost/u1@localhost'
-       msg = @buildMessage(message.publisher, "rep", "Bonjour à toi aussi")
-       @send msg
+    @log "info", "Message reveived: #{JSON.stringify(message)}"
 
   send: (hMessage, cb) ->
     unless _.isString(hMessage.actor) then throw new Error "'aid' parameter must be a string"
@@ -155,14 +147,15 @@ class Actor extends EventEmitter
       @send msg, (hResult) =>
         if hResult.payload.status is codes.hResultStatus.OK
           outboundAdapter = adapters.outboundAdapter(hResult.payload.result.type, { targetActorAid: hResult.payload.result.targetActorAid, owner: @, url: hResult.payload.result.url })
-          @sending(hMessage, cb, outboundAdapter)
+          @state.outboundAdapters.push outboundAdapter
+          @sending hMessage, cb, outboundAdapter
         else
-          @log("Can't send hMessage : "+hResult.payload.result)
+          @log "debug", "Can't send hMessage : "+hResult.payload.result
 
   sending: (hMessage, cb, outboundAdapter) ->
     #Complete hCommand
-    errorCode = `undefined`
-    errorMsg = `undefined`
+    errorCode = undefined
+    errorMsg = undefined
 
     #Verify if well formatted
     unless hMessage.actor
@@ -193,7 +186,7 @@ class Actor extends EventEmitter
         hMessage.timeout = 0
 
       #Send it to transport
-      @log "Sending message: #{JSON.stringify(hMessage)}"
+      @log "debug", "Sending message: #{JSON.stringify(hMessage)}"
       outboundAdapter.send hMessage
     else if cb
       actor = hMessage.actor or "Unknown"
@@ -225,8 +218,8 @@ class Actor extends EventEmitter
         childRef = actorModule.newActor(props)
         @state.outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: props.actor , ref: childRef)
         # Starting the child
-        msg = @buildMessage(props.actor, "hCommand",  CMD_START)
-        @send msg
+        @send @buildMessage(props.actor, "hCommand",  CMD_START)
+
       when "fork"
         childRef = forker.fork __dirname+"/childlauncher", [classname , JSON.stringify(props)]
         @state.outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: props.actor , ref: childRef)
@@ -251,19 +244,38 @@ class Actor extends EventEmitter
     Function that enrich a message with actor details and logs it to the console
     @message {object} the message to log
   ###
-  log: (message) ->
+  log: (type, message) ->
     # TODO properly configure logging system
-    logger.debug "#{@actor} | #{message}"
+    switch type
+      when "debug"
+        logger.debug "#{@actor} | #{message}"
+        break
+      when "info"
+        logger.info "#{@actor} | #{message}"
+        break
+      when "warn"
+        logger.warn "#{@actor} | #{message}"
+        break
 
-  touchTrackers: =>
+  initTrackers: (trackers)->
+    if _.isArray(trackers) and trackers.length > 0
+      _.forEach trackers, (trackerProps) =>
+        @log "debug", "registering tracker #{trackerProps.trackerId}"
+        @state.trackers.push trackerProps
+        @state.inboundAdapters.push adapters.inboundAdapter("channel",  {owner: @, url: trackerProps.broadcastUrl})
+        @state.outboundAdapters.push adapters.outboundAdapter("socket", {owner: @, targetActorAid: trackerProps.trackerId, url: trackerProps.trackerUrl})
+    else
+      @log "debug", "no tracker was provided"
+
+  touchTrackers: ->
     _.forEach @state.trackers, (trackerProps) =>
       if trackerProps.trackerId isnt @actor
-        @log "touching tracker #{trackerProps.trackerId}"
+        @log "debug", "touching tracker #{trackerProps.trackerId}"
         inboundAdapters = []
-        for i in @state.inboundAdapters
-          inboundAdapters.push {type:i.type, url:i.url}
-        msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:inboundAdapters})
-        @send(msg)
+        if @state.status isnt STATUS_STOPPING
+          for i in @state.inboundAdapters
+            inboundAdapters.push {type:i.type, url:i.url}
+        @send @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:inboundAdapters})
 
 
   setStatus: (status) ->
@@ -273,16 +285,13 @@ class Actor extends EventEmitter
       when STATUS_STARTED
         @touchTrackers()
         #interval = setInterval(@touchTrackers, 60000)
-        if @actor is "engine@localhost/dispatcher/worker2"
-          msg = @buildMessage("engine@localhost/dispatcher", "msg", "Salut copain worker")
-          @send msg
       when STATUS_STOPPING
         @touchTrackers()
         #clearInterval(interval)
     # advertise
     @emit status
     # Log
-    @log "new status:#{status}"
+    @log "debug", "new status:#{status}"
 
   ###*
     Function that starts the actor, including its inbound adapters
@@ -299,13 +308,18 @@ class Actor extends EventEmitter
     @setStatus STATUS_STOPPING
     # Stop children first
     _.forEach @state.children, (childAid) =>
-      msg = @buildMessage(childAid, "hCommand", CMD_STOP)
-      @send msg
+      @send @buildMessage(childAid, "hCommand", CMD_STOP)
     # Stop adapters second
     _.invoke @state.inboundAdapters, "stop"
     _.invoke @state.outboundAdapters, "stop"
     @setStatus STATUS_STOPPED
     @removeAllListeners()
+
+  removePeer: (actor) ->
+    @log "debug", "Removing peer #{actor}"
+    _.forEach @state.outboundAdapters, (outbound) =>
+      if outbound.targetActorAid is actor
+        delete outbound
 
   buildMessage: (actor, type, payload, options) ->
     options = options or {}
