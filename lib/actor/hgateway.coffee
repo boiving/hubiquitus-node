@@ -23,18 +23,23 @@
 # *    If not, see <http://opensource.org/licenses/mit-license.php>.
 #
 
-{Actor} = require "./actor"
-adapters = require "./../adapters"
+{Actor} = require "./hactor"
+adapters = require "../client_connector/socketio_connector"
 zmq = require "zmq"
-validator = require "./../validator"
 _ = require "underscore"
+validator = require "./../validator"
 
-class Channel extends Actor
+class Gateway extends Actor
 
   constructor: (props) ->
     super
-    @type = "channel"
-    @subscribersAlias = "#{@actor}#subscribers"
+    # Setting outbound adapters
+    @type = 'gateway'
+    if props.sIOAdapterPort
+      adapterProps = {}
+      adapterProps.port = props.sIOAdapterPort
+      adapterProps.owner = @
+      adapters.sIOAdapter(adapterProps)
 
   onMessage: (hMessage) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
@@ -49,17 +54,13 @@ class Channel extends Actor
           else
             @receive(hMessage)
     catch error
-      @log "debug", "An error occured while processing incoming message: "+error
+      @log "warn", "An error occured while processing incoming message: "+error
 
-  receive: (message) ->
-    # TODO persit the message if necessary
-    #sends to all subscribers the message received
-    message.publisher = @actor
-    @send @buildMessage(@subscribersAlias, message.type, message.payload)
+  receive: (hMessage) ->
+    @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
+    @send hMessage
 
-  initTrackers: (trackers) ->
-    return
 
-exports.Channel = Channel
+exports.Gateway = Gateway
 exports.newActor = (props) ->
-  new Channel(props)
+  new Gateway(props)

@@ -23,7 +23,7 @@
 # *    If not, see <http://opensource.org/licenses/mit-license.php>.
 #
 
-{Actor} = require "./actor"
+{Actor} = require "./hactor"
 adapters = require "./../adapters"
 _ = require "underscore"
 codes = require("./../codes.coffee").hResultStatus
@@ -34,7 +34,8 @@ class Tracker extends Actor
     super
     #TODO check props
     @state.peers = []
-    @on "started", -> @pingChannel(props.broadcastUrl)
+    @state.askPeer = {}
+    #@on "started", -> @pingChannel(props.broadcastUrl)
 
   receive: (message) ->
     @log "debug", "Tracker received a message: #{JSON.stringify(message)}"
@@ -60,6 +61,11 @@ class Tracker extends Actor
       if outboundadapter
         status = codes.OK
         result = outboundadapter
+        if @state.askPeer[message.payload.actor]
+          @state.askPeer[message.payload.actor].push (message.publisher)
+        else
+          @state.askPeer[message.payload.actor] = []
+          @state.askPeer[message.payload.actor].push (message.publisher)
       else
         status = codes.INVALID_ATTR
         result = "Actor not found"
@@ -67,11 +73,18 @@ class Tracker extends Actor
       msg = @buildResult(message.publisher, message.msgid, status, result)
       @send msg
 
+  initChildren: (children)->
+    _.forEach children, (childProps) =>
+      childProps.trackers = [{
+        trackerId : @actor,
+        trackerUrl : @state.inboundAdapters[0].url,
+        }]
+      @createChild childProps.type, childProps.method, childProps
 
   pingChannel: (broadcastUrl) ->
-    @log "debug", "Starting a channel broadcasting on #{broadcastUrl}"
-    @trackerChannelAid = @createChild "channel", "inproc",
-      { actor: "channel", outboundAdapters: [ { type: "channel", url: broadcastUrl } ] }
+    #@log "debug", "Starting a channel broadcasting on #{broadcastUrl}"
+    #@trackerChannelAid = @createChild "hchannel", "inproc",
+    #  { actor: "channel", outboundAdapters: [ { type: "channel", url: broadcastUrl } ] }
     #interval = setInterval(=>
     #    @send @buildMessage(@trackerChannelAid, "msg", "New event pusblished by tracker #{@actor}")
     #  , 3000)
@@ -89,8 +102,10 @@ class Tracker extends Actor
     outboundadapter
 
   stopAlert: (actor) ->
-    msg = @buildMessage(@trackerChannelAid, "hStopAlert", {actoraid:actor})
-    @send msg
+    if @state.askPeer[actor]
+      for asker in @state.askPeer[actor]
+        msg = @buildMessage(asker, "hStopAlert", {actoraid:actor})
+        @send msg
 
 exports.Tracker = Tracker
 exports.newActor = (props) ->

@@ -86,7 +86,7 @@ class SocketIO_Connector
     data.trackInbox = inboundAdapters
     data.actor = data.publisher
     data.inboundAdapters
-    client.hClient.createChild "session", "inproc", data, (child) =>
+    client.hClient.createChild "hsession", "inproc", data, (child) =>
       #Relay all server status messages
       child.initListener(client)
       client.child = child.actor

@@ -1,36 +1,29 @@
 {
-    "actor": "engine@localhost",
-    "type": "gateway",
+    "actor": "tracker@localhost",
+    "type": "htracker",
     "children": [
         {
-            "actor": "tracker",
-            "type":"tracker",
+            "actor": "trackChannel",
+            "type": "hchannel",
             "method": "inproc",
-            "broadcastUrl": "tcp://127.0.0.1:2998",
-            "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2997" } ]
+            "outboundAdapters": [ { "type": "channel", "url": "tcp://127.0.0.1:2998" } ]
         },
         {
-            "actor": "dispatcher",
-            "type": "dispatcher",
+            "actor": "gateway",
+            "type": "hgateway",
             "method": "inproc",
-            "workers": { "method": "fork", "type": "actor", "nb": 2 },
-            "trackers": [
+            "children": [
                 {
-                    "trackerId" : "engine@localhost/tracker",
-                    "trackerUrl" : "tcp://127.0.0.1:2997",
-                    "broadcastUrl" : "tcp://127.0.0.1:2998"
+                    "actor": "dispatcher",
+                    "type": "hdispatcher",
+                    "method": "inproc",
+                    "workers": { "method": "fork", "type": "hactor", "nb": 2 },
+                    "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2992" } ]
                 }
             ],
-            "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2992" } ]
+            "inboundAdapters": [ { "type": "socket", "url": "tcp://*:3993" } ],
+            "sIOAdapterPort": 8080
         }
     ],
-    "inboundAdapters": [ { "type": "socket", "url": "tcp://*:3993" } ],
-    "trackers": [
-        {
-            "trackerId" : "engine@localhost/tracker",
-            "trackerUrl" : "tcp://127.0.0.1:2997",
-            "broadcastUrl" : "tcp://127.0.0.1:2998"
-        }
-    ],
-    "sIOAdapters": [ { "type": "sIO", "port": 8080 } ]
+    "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2997" } ]
 }

@@ -23,34 +23,40 @@
 # *    If not, see <http://opensource.org/licenses/mit-license.php>.
 #
 
-{Actor} = require "./actor"
+{Actor} = require "./hactor"
 adapters = require "./../adapters"
 zmq = require "zmq"
+_ = require "underscore"
+validator = require "./../validator"
 
-class Dispatcher extends Actor
+class Channel extends Actor
 
   constructor: (props) ->
     super
-    @workersAlias = "#{@actor}#workers"
-    @addWorkers(props.workers)
-    @nbWorkers = props.workers.nb
+    @type = "channel"
+    @subscribersAlias = "#{@actor}#subscribers"
 
-  addWorkers : (workerProps) ->
-    dispatchingUrl = @genRandomListenPort()
-    @state.outboundAdapters.push adapters.outboundAdapter("lb_socket", { targetActorAid: @workersAlias, owner: @, url: dispatchingUrl })
-    #@state.inboundAdapters.push adapters.inboundAdapter("lb_socket", { owner: @, url: dispatchingUrl })
-    for i in [1..workerProps.nb]
-      @log "debug", "Adding a new worker #{i}"
-      @createChild workerProps.type, workerProps.method, actor: "worker#{i}", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }], #{type: "channel", url: "tcp://*:2998"} ]
+  onMessage: (hMessage) ->
+    @log "debug", "onMessage :"+JSON.stringify(hMessage)
+
+    try
+      validator.validateHMessage hMessage, (err, result) =>
+        if err
+          @log "debug", "hMessage not conform : ",result
+        else
+          if hMessage.type is "hCommand" and hMessage.actor is @actor
+            @runCommand(hMessage)
+          else
+            @receive(hMessage)
+    catch error
+      @log "warn", "An error occured while processing incoming message: "+error
 
   receive: (message) ->
-    @log "Dispatcher received a message to send to workers: #{JSON.stringify(message)}"
-    loadBalancing = Math.floor(Math.random() * @nbWorkers) + 1
-    sender = message.publisher
-    msg = @buildMessage("#{@actor}/worker#{loadBalancing}", message.type, message.payload)
-    msg.publisher = sender
-    @send msg
+    # TODO persit the message if necessary
+    #sends to all subscribers the message received
+    message.publisher = @actor
+    @send @buildMessage(@subscribersAlias, message.type, message.payload)
 
-exports.Dispatcher = Dispatcher
+exports.Channel = Channel
 exports.newActor = (props) ->
-  new Dispatcher(props)
+  new Channel(props)

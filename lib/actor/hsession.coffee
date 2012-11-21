@@ -23,7 +23,7 @@
 # *    If not, see <http://opensource.org/licenses/mit-license.php>.
 #
 
-{Actor} = require "./actor"
+{Actor} = require "./hactor"
 zmq = require "zmq"
 _ = require "underscore"
 statuses = require("../codes").statuses

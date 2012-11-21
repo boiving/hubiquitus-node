@@ -74,7 +74,14 @@ class Actor extends EventEmitter
     @state.outboundAdapters = []
 
     # Registering trackers
-    @initTrackers(props.trackers)
+    if _.isArray(props.trackers) and props.trackers.length > 0
+      _.forEach props.trackers, (trackerProps) =>
+        @log "debug", "registering tracker #{trackerProps.trackerId}"
+        @state.trackers.push trackerProps
+        #@state.inboundAdapters.push adapters.inboundAdapter("channel",  {owner: @, url: trackerProps.broadcastUrl})
+        @state.outboundAdapters.push adapters.outboundAdapter("socket", {owner: @, targetActorAid: trackerProps.trackerId, url: trackerProps.trackerUrl})
+    else
+      @log "debug", "no tracker was provided"
 
     # Setting inbound adapters
     _.forEach props.inboundAdapters, (adapterProps) =>
@@ -84,9 +91,7 @@ class Actor extends EventEmitter
     # Setting outbound adapters
     _.forEach props.outboundAdapters, (adapterProps) =>
       adapterProps.owner = @
-      outadapter = adapters.outboundAdapter(adapterProps.type, adapterProps)
-      @state.outboundAdapters.push outadapter
-      outadapter.start()
+      @state.outboundAdapters.push adapters.outboundAdapter(adapterProps.type, adapterProps)
 
     # registering callbacks on events
     @on "message", (hMessage) =>
@@ -104,8 +109,7 @@ class Actor extends EventEmitter
 
     # Adding children once started
     @on "started", ->
-      _.forEach props.children, (childProps) =>
-        @createChild childProps.type, childProps.method, childProps
+      @initChildren(props.children)
 
   onMessage: (hMessage) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
@@ -122,7 +126,7 @@ class Actor extends EventEmitter
           else
             @receive(hMessage)
     catch error
-      @log "debug", "An error occured while processing incoming message: "+error
+      @log "warn", "An error occured while processing incoming message: "+error
 
   runCommand: (hMessage) ->
     #case of a command
@@ -133,8 +137,8 @@ class Actor extends EventEmitter
         @stop()
       else throw new Error "Invalid command"
 
-  receive: (message) ->
-    @log "info", "Message reveived: #{JSON.stringify(message)}"
+  receive: (hMessage) ->
+    @log "info", "Message reveived: #{JSON.stringify(hMessage)}"
 
   send: (hMessage, cb) ->
     unless _.isString(hMessage.actor) then throw new Error "'aid' parameter must be a string"
@@ -210,8 +214,6 @@ class Actor extends EventEmitter
     # prefixing actor's id automatically
     props.actor = "#{@actor}/#{props.actor}"
 
-    # TODO : pass trackers to the child
-
     switch method
       when "inproc"
         actorModule = require "#{__dirname}/#{classname}"
@@ -257,15 +259,10 @@ class Actor extends EventEmitter
         logger.warn "#{@actor} | #{message}"
         break
 
-  initTrackers: (trackers)->
-    if _.isArray(trackers) and trackers.length > 0
-      _.forEach trackers, (trackerProps) =>
-        @log "debug", "registering tracker #{trackerProps.trackerId}"
-        @state.trackers.push trackerProps
-        @state.inboundAdapters.push adapters.inboundAdapter("channel",  {owner: @, url: trackerProps.broadcastUrl})
-        @state.outboundAdapters.push adapters.outboundAdapter("socket", {owner: @, targetActorAid: trackerProps.trackerId, url: trackerProps.trackerUrl})
-    else
-      @log "debug", "no tracker was provided"
+  initChildren: (children)->
+    _.forEach children, (childProps) =>
+      @createChild childProps.type, childProps.method, childProps
+
 
   touchTrackers: ->
     _.forEach @state.trackers, (trackerProps) =>
@@ -299,6 +296,7 @@ class Actor extends EventEmitter
   start: ->
     @setStatus STATUS_STARTING
     _.invoke @state.inboundAdapters, "start"
+    _.invoke @state.outboundAdapters, "start"
     @setStatus STATUS_STARTED
 
   ###*
@@ -317,9 +315,11 @@ class Actor extends EventEmitter
 
   removePeer: (actor) ->
     @log "debug", "Removing peer #{actor}"
+    index = 0
     _.forEach @state.outboundAdapters, (outbound) =>
       if outbound.targetActorAid is actor
-        delete outbound
+        delete @state.outboundAdapters[index]
+      index++
 
   buildMessage: (actor, type, payload, options) ->
     options = options or {}
@@ -347,7 +347,7 @@ class Actor extends EventEmitter
     hMessage.timeout = options.timeout  if options.timeout
     hMessage
 
-  buildResult: (actor, ref, status, result, flag) ->
+  buildResult: (actor, ref, status, result) ->
     hmessage = {}
     hmessage.msgid = @makeMsgId()
     hmessage.actor = actor
@@ -360,21 +360,14 @@ class Actor extends EventEmitter
     hresult = {}
     hresult.status = status
     hresult.result = result
-    hresult.flag = flag
     hmessage.payload = hresult
     hmessage
 
   ###
-  Create a unique message id from a client message id
-  Message id should follow the from clientMsgId#serverUniqueMsgId
-  If client message id contains #, it's removed
-
-  @param clientMsgId
+  Create a unique message id
   ###
-  makeMsgId: (clientMsgId) ->
+  makeMsgId: () ->
     msgId = ""
-    try
-      msgId = clientMsgId.replace("#", "")
     msgId += "#" + db.createPk()
     msgId
 
