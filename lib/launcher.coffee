@@ -28,6 +28,7 @@ adapters = require "./adapters"
 {Actor} = require "./actor/hactor"
 os = require "os"
 _ = require "underscore"
+opts = require "./options.coffee"
 
 createActor = (props) ->
   actorModule = require "#{__dirname}/actor/#{props.type}"
@@ -46,6 +47,9 @@ main = ->
 
 
   mockActor = { actor: "process"+process.pid }
+
+  db = require "#{__dirname}/dbPool.coffee"
+  db = db.getDbPool()
 
   engine = createActor(hTopology)
 

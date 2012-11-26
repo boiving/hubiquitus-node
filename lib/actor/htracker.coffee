@@ -105,7 +105,7 @@ class Tracker extends Actor
     if @state.askPeer[actor]
       for asker in @state.askPeer[actor]
         msg = @buildMessage(asker, "hStopAlert", {actoraid:actor})
-        @send msg
+        send msg
 
 exports.Tracker = Tracker
 exports.newActor = (props) ->

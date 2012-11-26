@@ -34,8 +34,8 @@ _ = require "underscore"
 {OutboundAdapter} = require "./../adapters"
 adapters = require "./../adapters"
 validator = require "./../validator"
-db = require("./../mongo.coffee").db
-codes = require("./../codes.coffee")
+dbPool = require("./../dbPool.coffee").getDbPool()
+codes = require "./../codes.coffee"
 
 _.mixin toDict: (arr, key) ->
   throw new Error('_.toDict takes an Array') unless _.isArray arr
@@ -119,6 +119,22 @@ class Actor extends EventEmitter
         if err
           @log "debug", "hMessage not conform : ",result
         else
+          if hMessage.persistent is true
+            timeout = hMessage.timeout
+            hMessage._id = hMessage.msgid
+
+            delete hMessage.persistent
+            delete hMessage.msgid
+            delete hMessage.timeout
+
+            dbPool.getDb "admin", (dbInstance) ->
+              dbInstance.saveHMessage hMessage
+
+            hMessage.persistent = true
+            hMessage.msgid = hMessage._id
+            hMessage.timeout = timeout
+            delete hMessage._id
+
           if hMessage.type is "hCommand" and hMessage.actor is @actor
             @runCommand(hMessage)
           else if hMessage.type is "hStopAlert"
@@ -147,7 +163,7 @@ class Actor extends EventEmitter
     if outboundAdapter
       @sending(hMessage, cb, outboundAdapter)
     else
-      msg = @buildMessage(@state.trackers[0].trackerId, "peer-search", {actor:hMessage.actor}, {timeout:5000})
+      msg = @buildMessage(@state.trackers[0].trackerId, "peer-search", {actor:hMessage.actor}, {timeout:5000, persistent:false})
       @send msg, (hResult) =>
         if hResult.payload.status is codes.hResultStatus.OK
           outboundAdapter = adapters.outboundAdapter(hResult.payload.result.type, { targetActorAid: hResult.payload.result.targetActorAid, owner: @, url: hResult.payload.result.url })
@@ -220,14 +236,14 @@ class Actor extends EventEmitter
         childRef = actorModule.newActor(props)
         @state.outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: props.actor , ref: childRef)
         # Starting the child
-        @send @buildMessage(props.actor, "hCommand",  CMD_START)
+        @send @buildMessage(props.actor, "hCommand",  CMD_START, {persistent:false})
 
       when "fork"
         childRef = forker.fork __dirname+"/childlauncher", [classname , JSON.stringify(props)]
         @state.outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: props.actor , ref: childRef)
         childRef.on "message", (msg) =>
           if msg.state is 'ready'
-            msg = @buildMessage(props.actor, "hCommand", CMD_START)
+            msg = @buildMessage(props.actor, "hCommand", CMD_START, {persistent:false})
             @send msg
       else
         throw new Error "Invalid method"
@@ -272,7 +288,7 @@ class Actor extends EventEmitter
         if @state.status isnt STATUS_STOPPING
           for i in @state.inboundAdapters
             inboundAdapters.push {type:i.type, url:i.url}
-        @send @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:inboundAdapters})
+        @send @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:inboundAdapters}, {persistent:false})
 
 
   setStatus: (status) ->
@@ -306,7 +322,7 @@ class Actor extends EventEmitter
     @setStatus STATUS_STOPPING
     # Stop children first
     _.forEach @state.children, (childAid) =>
-      @send @buildMessage(childAid, "hCommand", CMD_STOP)
+      @send @buildMessage(childAid, "hCommand", CMD_STOP, {persistent:false})
     # Stop adapters second
     _.invoke @state.inboundAdapters, "stop"
     _.invoke @state.outboundAdapters, "stop"
@@ -324,7 +340,8 @@ class Actor extends EventEmitter
   buildMessage: (actor, type, payload, options) ->
     options = options or {}
     hMessage = {}
-    throw new Error("missing actor")  unless actor
+    unless actor
+      throw new Error("missing actor")
     hMessage.publisher = @actor
     hMessage.msgid = UUID.generate()
     hMessage.published = hMessage.published or new Date()
@@ -338,7 +355,10 @@ class Actor extends EventEmitter
     if options.relevanceOffset
       currentDate = new Date()
       hMessage.relevance = new Date(currentDate.getTime() + options.relevanceOffset)
-    hMessage.persistent = options.persistent or true if options.persistent isnt null or options.persistent isnt `undefined`
+    if options.persistent isnt null or options.persistent isnt undefined
+      hMessage.persistent = options.persistent
+    if hMessage.persistent is null or hMessage.persistent is undefined
+      hMessage.persistent = true
     hMessage.location = options.location  if options.location
     hMessage.author = options.author  if options.author
     hMessage.published = options.published  if options.published
@@ -367,6 +387,8 @@ class Actor extends EventEmitter
   Create a unique message id
   ###
   makeMsgId: () ->
+    db = dbPool.getDb('admin')
+
     msgId = ""
     msgId += "#" + db.createPk()
     msgId

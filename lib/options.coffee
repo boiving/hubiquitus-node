@@ -121,7 +121,7 @@ overrideOptions = (options) ->
 
   _opts
 
-options = createOptions
+options = createOptions()
 ###
 Global options for the whole application
 ###

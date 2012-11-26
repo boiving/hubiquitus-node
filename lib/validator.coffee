@@ -25,7 +25,57 @@
 
 codes = require("./codes.coffee").hResultStatus
 log = require("winston")
-db = require("./mongo.coffee").db
+dbPool = require("./dbPool.coffee").db
+
+exports.validateHChannel = (hChannel, cb) ->
+  i = undefined
+  required = ["type", "_id", "owner", "subscribers", "active"]
+
+  #Test if object exists
+  unless hChannel instanceof Object
+    return cb(codes.INVALID_ATTR, "invalid object received")
+
+  #Test required attributes
+  i = 0
+  while i < required.length
+    if not hChannel[required[i]]? or hChannel[required[i]] is `undefined`
+      return cb(codes.MISSING_ATTR, "missing attribute " + required[i])
+    i++
+
+  #Test if correct format/ correct values
+  if hChannel._id and typeof hChannel._id isnt "string"
+    return cb(codes.INVALID_ATTR, "actor is not a string")
+  unless exports.isChannel(hChannel._id)
+    return cb(codes.INVALID_ATTR, "actor not valid " + hChannel._id)
+  if /^#hAdminChannel@/.test(hChannel._id)
+    return cb(codes.NOT_AUTHORIZED, "using reserved keyword " + hChannel._id + " as actor")
+  if hChannel.chdesc and typeof hChannel.chdesc isnt "string"
+    return cb(codes.INVALID_ATTR, "chdesc is not a string")
+  if typeof hChannel.priority isnt "undefined"
+    if typeof hChannel.priority isnt "number"
+      return cb(codes.INVALID_ATTR, "priority not a number")
+    if hChannel.priority < 0 or hChannel.priority > 5
+      return cb(codes.INVALID_ATTR, "priority is has not a valid value")
+  if hChannel.type isnt "channel"
+    return cb(codes.INVALID_ATTR, "type attribute is not 'channel'")
+  if typeof hChannel.location isnt "undefined" and (hChannel.location not instanceof Object)
+    return cb(codes.INVALID_ATTR, "location not an object")
+  unless exports.validateJID(hChannel.owner)
+    return cb(codes.INVALID_ATTR, "owner is not a string")
+  if exports.splitJID(hChannel.owner)[2]
+    return cb(codes.INVALID_ATTR, "owner is not a bare jid")
+  unless hChannel.subscribers instanceof Array
+    return cb(codes.INVALID_ATTR, "subscribers is not an array")
+  i = 0
+  while i < hChannel.subscribers.length
+    if not exports.validateJID(hChannel.subscribers[i]) or exports.splitJID(hChannel.subscribers[i])[2]
+      return cb(codes.INVALID_ATTR, "subscriber " + i + " is not a JID")
+    i++
+  if typeof hChannel.active isnt "boolean"
+    return cb(codes.INVALID_ATTR, "active is not a boolean")
+  if typeof hChannel.headers isnt "undefined" and (hChannel.headers not instanceof Object)
+    return cb(codes.INVALID_ATTR, "invalid headers object received")
+  cb codes.OK
 
 ###
 Checks if an hMessage is correctly formatted and has all the correct attributes
@@ -34,32 +84,56 @@ Checks if an hMessage is correctly formatted and has all the correct attributes
 result is a string or nothing
 ###
 exports.validateHMessage = (hMessage, cb) ->
-  return cb(codes.MISSING_ATTR, "invalid params object received")  if not hMessage or typeof hMessage isnt "object"
-  return cb(codes.MISSING_ATTR, "missing actor attribute in hMessage")  unless hMessage.actor
-  return cb(codes.INVALID_ATTR, "hMessages actor is invalid")  unless exports.validateJID(hMessage.actor)
-  return cb(codes.INVALID_ATTR, "hMessage type is not a string")  if hMessage.type and typeof hMessage.type isnt "string"
+  if not hMessage or typeof hMessage isnt "object"
+    return cb(codes.MISSING_ATTR, "invalid params object received")
+  unless hMessage.actor
+    return cb(codes.MISSING_ATTR, "missing actor attribute in hMessage")
+  unless exports.validateJID(hMessage.actor)
+    return cb(codes.INVALID_ATTR, "hMessages actor is invalid")
+  if hMessage.type and typeof hMessage.type isnt "string"
+    return cb(codes.INVALID_ATTR, "hMessage type is not a string")
   if hMessage.priority
-    return cb(codes.INVALID_ATTR, "hMessage priority is not a number")  unless typeof hMessage.priority is "number"
-    return cb(codes.INVALID_ATTR, "hMessage priority is not a valid constant")  if hMessage.priority > 5 or hMessage.priority < 0
+    unless typeof hMessage.priority is "number"
+      return cb(codes.INVALID_ATTR, "hMessage priority is not a number")
+    if hMessage.priority > 5 or hMessage.priority < 0
+      return cb(codes.INVALID_ATTR, "hMessage priority is not a valid constant")
   if hMessage.relevance
     hMessage.relevance = new Date(hMessage.relevance) #Sent as a string, convert back to date
-    return cb(codes.INVALID_ATTR, "hMessage relevance is specified and is not a valid date object")  if hMessage.relevance is "Invalid Date"
-  return cb(codes.INVALID_ATTR, "hMessage persistent is not a boolean")  if hMessage.persistent and typeof hMessage.persistent isnt "boolean"
-  return cb(codes.INVALID_ATTR, "hMessage location is not an Object")  if hMessage.location and (hMessage.location not instanceof Object)
-  return cb(codes.INVALID_ATTR, "hMessage author is not a JID")  if hMessage.author and not exports.validateJID(hMessage.author)
-  return cb(codes.MISSING_ATTR, "hMessage missing publisher")  unless hMessage.publisher
+    if hMessage.relevance is "Invalid Date"
+      return cb(codes.INVALID_ATTR, "hMessage relevance is specified and is not a valid date object")
+  if hMessage.persistent and typeof hMessage.persistent isnt "boolean"
+    return cb(codes.INVALID_ATTR, "hMessage persistent is not a boolean")
+  if hMessage.location and (hMessage.location not instanceof Object)
+    return cb(codes.INVALID_ATTR, "hMessage location is not an Object")
+  if hMessage.author and not exports.validateJID(hMessage.author)
+    return cb(codes.INVALID_ATTR, "hMessage author is not a JID")
+  unless hMessage.publisher
+    return cb(codes.MISSING_ATTR, "hMessage missing publisher")
   if hMessage.published
     hMessage.published = new Date(hMessage.published) #Sent as a string, convert back to date
-    return cb(codes.INVALID_ATTR, "hMessage published is specified and is not a valid date object")  if hMessage.published is "Invalid Date"
-  return cb(codes.INVALID_ATTR, "invalid headers object received")  if typeof hMessage.headers isnt "undefined" and (hMessage.headers not instanceof Object)
+    if hMessage.published is "Invalid Date"
+      return cb(codes.INVALID_ATTR, "hMessage published is specified and is not a valid date object")
+  if typeof hMessage.headers isnt "undefined" and (hMessage.headers not instanceof Object)
+    return cb(codes.INVALID_ATTR, "invalid headers object received")
   if hMessage.headers
-    return cb(codes.INVALID_ATTR, "invalid RELEVANCE_OFFSET header received")  if hMessage.headers.RELEVANCE_OFFSET and typeof hMessage.headers.RELEVANCE_OFFSET isnt "number"
-    return cb(codes.INVALID_ATTR, "invalid MAX_MSG_RETRIEVAL header received")  if hMessage.headers.MAX_MSG_RETRIEVAL and typeof hMessage.headers.MAX_MSG_RETRIEVAL isnt "number"
+    if hMessage.headers.RELEVANCE_OFFSET and typeof hMessage.headers.RELEVANCE_OFFSET isnt "number"
+      return cb(codes.INVALID_ATTR, "invalid RELEVANCE_OFFSET header received")
+    if hMessage.headers.MAX_MSG_RETRIEVAL and typeof hMessage.headers.MAX_MSG_RETRIEVAL isnt "number"
+      return cb(codes.INVALID_ATTR, "invalid MAX_MSG_RETRIEVAL header received")
   if exports.isChannel(hMessage.actor)
-    log.debug "client_connector : " + hMessage.actor + "Channels : " + JSON.stringify(db.cache.hChannels)
-    channel = db.cache.hChannels[hMessage.actor]
-    return cb(codes.NOT_AVAILABLE, "the channel does not exist")  unless channel
-    return cb(codes.NOT_AUTHORIZED, "the channel is inactive")  if channel.active is false
+    channel = undefined
+    dbPool.getDb "admin", (dbInstance) ->
+      stream = dbInstance.get("hChannels").find(_id: hMessage.actor).streamRecords()
+      stream.on "data", (hChannel) ->
+        channel = hChannel
+
+      stream.on "end", ->
+        unless channel
+          return cb(codes.NOT_AVAILABLE, "the channel does not exist")
+        if channel.active is false
+          cb codes.NOT_AUTHORIZED, "the channel is inactive"
+
+
   cb codes.OK
 
 ###
@@ -69,6 +143,39 @@ Returns true or false if it is a valid JID following hubiquitus standards
 exports.validateJID = (jid) ->
   /(^[^@\/<>'"]+(@.+|$)|^[^#@]((?!@).)*$)/.test jid
   #new RegExp("^(?:([^@/<>'\"]+)@)([^@/<>'\"]+)(?:/([^/<>'\"]*))?/.*").test jid
+
+###
+Removes attributes that are strings and that are empty (ie. "") in hLocation
+@param obj - Object that has the object attributes
+###
+exports.cleanLocationAttrs = (obj) ->
+  for key of obj
+    obj[key] = exports.cleanLocationAttrs(obj[key])  if key is "pos"
+    delete obj[key]  if obj[key] is ""
+  obj
+
+###
+Removes attributes that are objects and do not have any attributes inside (removes empty objects).
+It also removes attributes that are strings and that are empty (ie. "")
+@param obj - Object that has the object attributes
+@param attrs - Array with the names of the attributes that must be deleted from obj if empty.
+###
+exports.cleanEmptyAttrs = (obj, attrs) ->
+  found = undefined
+  i = 0
+
+  while i < attrs.length
+    found = false
+
+    # Search if object has attributes
+    if obj[attrs[i]] instanceof Object
+      for attr of obj[attrs[i]]
+        obj[attrs[i]] = exports.cleanLocationAttrs(obj[attrs[i]])  if attrs[i] is "location"
+        found = true  if obj[attrs[i]].hasOwnProperty(attr)
+    else found = true  if typeof obj[attrs[i]] is "string" and obj[attrs[i]] isnt ""
+    delete obj[attrs[i]]  unless found
+    i++
+  obj #Make it chainable
 
 ###
 Tests if the given jid is that of a channel. This does not test if the channel is valid

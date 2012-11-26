@@ -43,7 +43,7 @@ class Session extends Actor
       @log "debug", "touching tracker #{trackerProps.trackerId}"
       if @state.status is "stopping"
         @trackInbox = []
-      msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:@trackInbox})
+      msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:@trackInbox}, {persistent:false})
       @send(msg)
 
   receive: (hMessage) ->
@@ -55,6 +55,7 @@ class Session extends Actor
       @send hMessage
 
   initListener: (client) =>
+    delete client["hClient"]
     @hClient = client
 
     @on "hStatus", (msg) ->
@@ -68,7 +69,9 @@ class Session extends Actor
         sid: client.id
 
       #Start listening for client actions
-      @addSocketListeners client
+      client.socket.on "hMessage", (hMessage) =>
+        @log "info", "Client ID " + client.id + " sent hMessage", hMessage
+        @emit "message", hMessage
 
     @on "disconnect", ->
       @stop()
@@ -78,11 +81,6 @@ class Session extends Actor
     #  client.socket.emit "hMessage", hMessage
     @emit "hStatus", {status:statuses.CONNECTED, errorCode:errors.NO_ERROR}
     @emit "connect"
-
-  addSocketListeners: (client) =>
-    client.socket.on "hMessage", (hMessage) =>
-      @log "info", "Client ID " + client.id + " sent hMessage", hMessage
-      @emit "message", hMessage
 
 exports.Session = Session
 exports.newActor = (props) ->
