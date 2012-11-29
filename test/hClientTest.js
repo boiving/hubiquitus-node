@@ -37,7 +37,7 @@ describe('hClient XMPP Connection', function(){
 
     after(config.afterFN)
 
-    describe('#connect()', function(){
+    /*describe('#connect()', function(){
         var xmppOptions;
 
         beforeEach(function(){
@@ -86,7 +86,7 @@ describe('hClient XMPP Connection', function(){
             });
             hClient.connect(xmppOptions);
         })*/
-    })
+    /*})
 
     describe('#FilterMessage()', function(){
         var cmdMsg, hMsg;
@@ -1130,7 +1130,7 @@ describe('hClient XMPP Connection', function(){
                 });
             })
         })
-    })
+    })*/
 
     describe('#processMsgInternal()', function(){
         var cmdMsg, hMsg;
@@ -1149,7 +1149,7 @@ describe('hClient XMPP Connection', function(){
             cmdMsg = config.makeHMessage('hnode@' + hClient.serverDomain, config.logins[1].jid, 'hCommand',{});
         })
 
-        it('should return hResult error INVALID_ATTR if actor is not a valide JID', function(done){
+        /*it('should return hResult error INVALID_ATTR if actor is not a valide JID', function(done){
             cmdMsg.actor = "invalid JID";
             hClient.processMsgInternal(cmdMsg, function(hMessage){
                 hMessage.should.have.property('type', 'hResult');
@@ -1187,7 +1187,7 @@ describe('hClient XMPP Connection', function(){
                 hMessage.payload.should.have.property('status', codes.hResultStatus.OK);
                 done();
             });
-        })
+        })*/
 
         it('should save hCommand and hResult with same _id when persistent=true without msgid and persistent', function(done){
             cmdMsg.persistent = true;

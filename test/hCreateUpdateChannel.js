@@ -109,7 +109,6 @@ describe('hCreateUpdateChannel', function(){
     it('should return hResult error OK with actor with a different domain', function(done){
         createCmd.payload.params.actor = '#channel@another.domain';
         hCommandController.execCommand(createCmd, function(hMessage){
-            console.log(hMessage)
             hMessage.should.have.property('ref', createCmd.msgid);
             hMessage.payload.should.have.property('status', status.OK);
             done();
@@ -338,7 +337,7 @@ describe('hCreateUpdateChannel', function(){
         });
     })
 
-    it('should update cache after successful saving of hChannel', function(done){
+    /*it('should update cache after successful saving of hChannel', function(done){
         this.timeout(5000);
         var actor = '#' + config.db.createPk() + '@' + splitJID(config.validJID)[1];
         createCmd.payload.params.actor = actor;
@@ -350,7 +349,7 @@ describe('hCreateUpdateChannel', function(){
             config.db.cache.hChannels[actor].should.have.property('priority', 3);
             done();
         });
-    })
+    })*/
 
 
     describe('#Update Channel', function(){
@@ -369,7 +368,7 @@ describe('hCreateUpdateChannel', function(){
             hCommandController.execCommand(createCmd, function(hMessage){
                 hMessage.should.have.property('ref', createCmd.msgid);
                 hMessage.payload.should.have.property('status', status.OK);
-                config.db.cache.hChannels[existingCHID].subscribers.should.be.eql(createCmd.payload.params.subscribers);
+                //config.db.cache.hChannels[existingCHID].subscribers.should.be.eql(createCmd.payload.params.subscribers);
                 done();
             });
         })

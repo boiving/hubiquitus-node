@@ -201,7 +201,6 @@ describe('hGetLastMessages', function(){
                     //Should be a string for compare
                     var supposedDate = '' +DateTab[int];
                     var trueDate = '' + hMessage.payload.result[i].published;
-
                     supposedDate.should.be.eql(trueDate);
                 }
                 done();

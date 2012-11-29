@@ -177,15 +177,6 @@ describe('hPublish', function(){
         });
     })
 
-    it('should return hResult error NOT_AUTHORIZED when actor is inactive', function(done){
-        msg.actor = inactiveChan;
-        hClient.processMsgInternal(msg, function(hMessage) {
-            hMessage.payload.should.have.property('status', status.NOT_AUTHORIZED);
-            hMessage.payload.should.have.property('result').and.be.a('string');
-            done();
-        });
-    })
-
     it('should return hResult error INVALID_ATTR when type is not string castable', function(done){
         msg.type = [];
         hClient.processMsgInternal(msg, function(hMessage) {
@@ -553,6 +544,16 @@ describe('hPublish', function(){
             });
 
             hClient.processMsgInternal(msg, function(hMessage) {});
+        })
+
+        it('should return hResult error NOT_AUTHORIZED when actor is inactive', function(done){
+            msg.actor = inactiveChan;
+            msg.msgid = config.db.createPk();
+            hClient.processMsgInternal(msg, function(hMessage) {
+                hMessage.payload.should.have.property('status', status.NOT_AUTHORIZED);
+                hMessage.payload.should.have.property('result').and.be.a('string');
+                done();
+            });
         })
 
     })
