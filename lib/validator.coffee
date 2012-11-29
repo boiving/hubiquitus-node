@@ -142,7 +142,13 @@ Returns true or false if it is a valid JID following hubiquitus standards
 ###
 exports.validateJID = (jid) ->
   /(^[^@\/<>'"]+(@.+|$)|^[^#@]((?!@).)*$)/.test jid
-  #new RegExp("^(?:([^@/<>'\"]+)@)([^@/<>'\"]+)(?:/([^/<>'\"]*))?/.*").test jid
+
+###
+Returns true or false if it is a valid JID with ressource following hubiquitus standards
+@param jid - the jid string to validate
+###
+exports.validateFullJID = (jid) ->
+  /(^[^@\/<>'"]+(@.+\/.*|$)|^[^#@]((?!@).)*\/.*$)/.test jid
 
 ###
 Removes attributes that are strings and that are empty (ie. "") in hLocation

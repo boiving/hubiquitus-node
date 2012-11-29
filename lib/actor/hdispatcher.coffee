@@ -42,7 +42,7 @@ class Dispatcher extends Actor
     #@state.inboundAdapters.push adapters.inboundAdapter("lb_socket", { owner: @, url: dispatchingUrl })
     for i in [1..workerProps.nb]
       @log "debug", "Adding a new worker #{i}"
-      @createChild workerProps.type, workerProps.method, actor: "worker#{i}", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }], #{type: "channel", url: "tcp://*:2998"} ]
+      @createChild workerProps.type, workerProps.method, actor: "worker#{i}@localhost", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }], #{type: "channel", url: "tcp://*:2998"} ]
 
   onMessage: (hMessage) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)

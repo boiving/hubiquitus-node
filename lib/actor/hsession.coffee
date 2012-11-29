@@ -28,6 +28,7 @@ zmq = require "zmq"
 _ = require "underscore"
 statuses = require("../codes").statuses
 errors = require("../codes").errors
+validator = require "../validator"
 
 class Session extends Actor
 
@@ -43,7 +44,7 @@ class Session extends Actor
       @log "debug", "touching tracker #{trackerProps.trackerId}"
       if @state.status is "stopping"
         @trackInbox = []
-      msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:@trackInbox}, {persistent:false})
+      msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:validator.getBareJID(@actor), peerStatus:@state.status, peerInbox:@trackInbox}, {persistent:false})
       @send(msg)
 
   receive: (hMessage) ->
@@ -74,6 +75,7 @@ class Session extends Actor
         @emit "message", hMessage
 
     @on "disconnect", ->
+      @emit "hStatus", {status:statuses.DISCONNECTING, errorCode:errors.NO_ERROR}
       @stop()
     #Start listening for messages from Session and relaying them
     #client.hClient.on "hMessage", (hMessage) ->

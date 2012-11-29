@@ -47,6 +47,7 @@ class DbPool extends EventEmitter
     mongodb.connect opts.options["mongo.URI"]
     dbInstances[mongodb.db.databaseName] = mongodb
 
+    log.debug "dbPool started"
     events.call this
 
   getDb: (dbName, cb) ->

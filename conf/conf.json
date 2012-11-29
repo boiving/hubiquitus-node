@@ -3,18 +3,18 @@
     "type": "htracker",
     "children": [
         {
-            "actor": "trackChannel",
+            "actor": "trackChannel@localhost",
             "type": "hchannel",
             "method": "inproc",
             "outboundAdapters": [ { "type": "channel", "url": "tcp://127.0.0.1:2998" } ]
         },
         {
-            "actor": "gateway",
+            "actor": "gateway@localhost",
             "type": "hgateway",
             "method": "inproc",
             "children": [
                 {
-                    "actor": "dispatcher",
+                    "actor": "dispatcher@localhost",
                     "type": "hdispatcher",
                     "method": "inproc",
                     "workers": { "method": "fork", "type": "hactor", "nb": 2 },

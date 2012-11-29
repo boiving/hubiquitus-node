@@ -27,6 +27,7 @@
 adapters = require "./../adapters"
 _ = require "underscore"
 codes = require("./../codes.coffee").hResultStatus
+validator = require "./../validator.coffee"
 
 class Tracker extends Actor
 
@@ -42,15 +43,15 @@ class Tracker extends Actor
     if message.type is "peer-info"
       existPeer = false
       _.forEach @state.peers, (peers) =>
-        if peers.peerID is message.payload.peerId
+        if peers.peerFullId is message.publisher
           existPeer = true
           peers.peerStatus = message.payload.peerStatus
           peers.peerInbox = message.payload.peerInbox
           if peers.peerStatus is "stopping"
             @stopAlert(message.publisher)
       if existPeer isnt true
-        @state.peers.push {peerType:message.payload.peerType, peerID:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
-        outbox = @findOutbox(message.payload.peerId)
+        @state.peers.push {peerType:message.payload.peerType, peerFullId:message.publisher, peerId:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
+        outbox = @findOutbox(message.publisher)
         if outbox
           @state.outboundAdapters.push adapters.outboundAdapter(outbox.type, { targetActorAid: outbox.targetActorAid, owner: @, url: outbox.url })
 
@@ -93,12 +94,26 @@ class Tracker extends Actor
   findOutbox: (actor) ->
     outboundadapter = undefined
     _.forEach @state.peers, (peers) =>
-      if peers.peerID is actor
+      if peers.peerFullId is actor
         unless outboundadapter
           if peers.peerStatus is "started"
             _.forEach peers.peerInbox, (inbox) =>
               if inbox.type is "socket"
                 outboundadapter = {type: inbox.type, targetActorAid: actor, url: inbox.url}
+    unless outboundadapter
+      outTab = []
+      _.forEach @state.peers, (peers) =>
+        if peers.peerId is validator.getBareJID(actor)
+          outTab.push(peers)
+      if outTab.length > 0
+        lb_peers = outTab[Math.floor(Math.random() * outTab.length)]
+        if lb_peers.peerStatus is "started"
+          _.forEach lb_peers.peerInbox, (inbox) =>
+            if inbox.type is "socket"
+              console.log "inbox ",inbox
+              outboundadapter = {type: inbox.type, targetActorAid: lb_peers.peerFullId, url: inbox.url}
+              console.log "tou", outboundadapter
+
     outboundadapter
 
   stopAlert: (actor) ->

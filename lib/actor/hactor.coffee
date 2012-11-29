@@ -34,7 +34,6 @@ _ = require "underscore"
 {OutboundAdapter} = require "./../adapters"
 adapters = require "./../adapters"
 validator = require "./../validator"
-dbPool = require("./../dbPool.coffee").getDbPool()
 codes = require "./../codes.coffee"
 
 _.mixin toDict: (arr, key) ->
@@ -61,7 +60,12 @@ class Actor extends EventEmitter
   # Constructor
   constructor: (props) ->
     # setting up instance attributes
-    @actor = props.actor
+    if(validator.validateFullJID(props.actor))
+      @actor = props.actor
+    else if(validator.validateJID(props.actor))
+      @actor = "#{props.actor}/#{UUID.generate()}"
+    else
+      throw new Error "Invalid actor JID"
     @type = "actor"
     @msgToBeAnswered = {}
 
@@ -119,23 +123,7 @@ class Actor extends EventEmitter
         if err
           @log "debug", "hMessage not conform : ",result
         else
-          if hMessage.persistent is true
-            timeout = hMessage.timeout
-            hMessage._id = hMessage.msgid
-
-            delete hMessage.persistent
-            delete hMessage.msgid
-            delete hMessage.timeout
-
-            dbPool.getDb "admin", (dbInstance) ->
-              dbInstance.saveHMessage hMessage
-
-            hMessage.persistent = true
-            hMessage.msgid = hMessage._id
-            hMessage.timeout = timeout
-            delete hMessage._id
-
-          if hMessage.type is "hCommand" and hMessage.actor is @actor
+          if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
             @runCommand(hMessage)
           else if hMessage.type is "hStopAlert"
             @removePeer(hMessage.payload.actoraid)
@@ -168,6 +156,7 @@ class Actor extends EventEmitter
         if hResult.payload.status is codes.hResultStatus.OK
           outboundAdapter = adapters.outboundAdapter(hResult.payload.result.type, { targetActorAid: hResult.payload.result.targetActorAid, owner: @, url: hResult.payload.result.url })
           @state.outboundAdapters.push outboundAdapter
+          hMessage.actor = hResult.payload.result.targetActorAid
           @sending hMessage, cb, outboundAdapter
         else
           @log "debug", "Can't send hMessage : "+hResult.payload.result
@@ -228,7 +217,7 @@ class Actor extends EventEmitter
     unless props.trackers then props.trackers = @state.trackers
 
     # prefixing actor's id automatically
-    props.actor = "#{@actor}/#{props.actor}"
+    props.actor = "#{props.actor}/#{UUID.generate()}"
 
     switch method
       when "inproc"
@@ -266,13 +255,13 @@ class Actor extends EventEmitter
     # TODO properly configure logging system
     switch type
       when "debug"
-        logger.debug "#{@actor} | #{message}"
+        logger.debug "#{validator.getBareJID(@actor)} | #{message}"
         break
       when "info"
-        logger.info "#{@actor} | #{message}"
+        logger.info "#{validator.getBareJID(@actor)} | #{message}"
         break
       when "warn"
-        logger.warn "#{@actor} | #{message}"
+        logger.warn "#{validator.getBareJID(@actor)} | #{message}"
         break
 
   initChildren: (children)->
@@ -288,7 +277,7 @@ class Actor extends EventEmitter
         if @state.status isnt STATUS_STOPPING
           for i in @state.inboundAdapters
             inboundAdapters.push {type:i.type, url:i.url}
-        @send @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:@actor, peerStatus:@state.status, peerInbox:inboundAdapters}, {persistent:false})
+        @send @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:validator.getBareJID(@actor), peerStatus:@state.status, peerInbox:inboundAdapters}, {persistent:false})
 
 
   setStatus: (status) ->
@@ -387,10 +376,8 @@ class Actor extends EventEmitter
   Create a unique message id
   ###
   makeMsgId: () ->
-    db = dbPool.getDb('admin')
-
     msgId = ""
-    msgId += "#" + db.createPk()
+    msgId += "#" + UUID.generate()
     msgId
 
 

@@ -28,6 +28,7 @@ adapters = require "./../adapters"
 zmq = require "zmq"
 _ = require "underscore"
 validator = require "./../validator"
+dbPool = require("./../dbPool.coffee").getDbPool()
 
 class Channel extends Actor
 
@@ -44,6 +45,22 @@ class Channel extends Actor
         if err
           @log "debug", "hMessage not conform : ",result
         else
+          if hMessage.persistent is true
+            timeout = hMessage.timeout
+            hMessage._id = hMessage.msgid
+
+            delete hMessage.persistent
+            delete hMessage.msgid
+            delete hMessage.timeout
+
+            dbPool.getDb "admin", (dbInstance) ->
+              dbInstance.saveHMessage hMessage
+
+            hMessage.persistent = true
+            hMessage.msgid = hMessage._id
+            hMessage.timeout = timeout
+            delete hMessage._id
+
           if hMessage.type is "hCommand" and hMessage.actor is @actor
             @runCommand(hMessage)
           else
