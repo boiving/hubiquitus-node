@@ -25,7 +25,7 @@
 
 codes = require("./codes.coffee").hResultStatus
 log = require("winston")
-dbPool = require("./dbPool.coffee").db
+dbPool = require("./dbPool.coffee").getDbPool()
 
 exports.validateHChannel = (hChannel, cb) ->
   i = undefined

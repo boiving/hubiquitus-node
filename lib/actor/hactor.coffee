@@ -35,6 +35,8 @@ _ = require "underscore"
 adapters = require "./../adapters"
 validator = require "./../validator"
 codes = require "./../codes.coffee"
+options = require "./../options"
+cmdControllerConst = require('./../hcommand_controller').Controller
 
 _.mixin toDict: (arr, key) ->
   throw new Error('_.toDict takes an Array') unless _.isArray arr
@@ -76,6 +78,10 @@ class Actor extends EventEmitter
     @state.trackers = []
     @state.inboundAdapters = []
     @state.outboundAdapters = []
+
+    # Initializing hcommand_controller
+    @cmdController = new cmdControllerConst(options.commandController);
+    @cmdController.context.hActor = @;
 
     # Registering trackers
     if _.isArray(props.trackers) and props.trackers.length > 0
@@ -123,6 +129,13 @@ class Actor extends EventEmitter
         if err
           @log "debug", "hMessage not conform : ",result
         else
+          #Complete missing values (msgid added later)
+          hMessage.convid = (if not hMessage.convid or hMessage.convid is hMessage.msgid then hMessage.msgid else hMessage.convid)
+          hMessage.published = hMessage.published or new Date()
+
+          #Empty location and headers should not be sent/saved.
+          validator.cleanEmptyAttrs hMessage, ["headers", "location"]
+
           if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
             @runCommand(hMessage)
           else if hMessage.type is "hStopAlert"
@@ -139,7 +152,18 @@ class Actor extends EventEmitter
         @start()
       when "stop"
         @stop()
-      else throw new Error "Invalid command"
+      else
+        @cmdController.execCommand hMessage, (result) ->
+          if hMessage.timeout is 0
+            console.log "result 1 : ",result
+            log.debug "the sender doesn't want callback"
+          else if limitDate.getTime() - currentDate.getTime() <= 0
+            console.log "result 2 : ",result
+            log.debug "Exceed client timeout, no callback send"
+          else
+            console.log "result 3 : ",result
+            #cb result
+
 
   receive: (hMessage) ->
     @log "info", "Message reveived: #{JSON.stringify(hMessage)}"

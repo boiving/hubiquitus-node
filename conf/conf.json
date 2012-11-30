@@ -3,7 +3,7 @@
     "type": "htracker",
     "children": [
         {
-            "actor": "trackChannel@localhost",
+            "actor": "#trackChannel@localhost",
             "type": "hchannel",
             "method": "inproc",
             "outboundAdapters": [ { "type": "channel", "url": "tcp://127.0.0.1:2998" } ]
@@ -18,12 +18,12 @@
                     "type": "hdispatcher",
                     "method": "inproc",
                     "workers": { "method": "fork", "type": "hactor", "nb": 2 },
-                    "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2992" } ]
+                    "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:2992" } ]
                 }
             ],
-            "inboundAdapters": [ { "type": "socket", "url": "tcp://*:3993" } ],
+            "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:3993" } ],
             "sIOAdapterPort": 8080
         }
     ],
-    "inboundAdapters": [ { "type": "socket", "url": "tcp://*:2997" } ]
+    "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:2997" } ]
 }

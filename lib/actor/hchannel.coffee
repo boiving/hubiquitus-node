@@ -45,6 +45,13 @@ class Channel extends Actor
         if err
           @log "debug", "hMessage not conform : ",result
         else
+          #Complete missing values (msgid added later)
+          hMessage.convid = (if not hMessage.convid or hMessage.convid is hMessage.msgid then hMessage.msgid else hMessage.convid)
+          hMessage.published = hMessage.published or new Date()
+
+          #Empty location and headers should not be sent/saved.
+          validator.cleanEmptyAttrs hMessage, ["headers", "location"]
+
           if hMessage.persistent is true
             timeout = hMessage.timeout
             hMessage._id = hMessage.msgid

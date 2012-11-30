@@ -65,7 +65,6 @@ class Session extends Actor
     @on "connect", ->
       client.publisher = @actor
       client.socket.emit "attrs",
-      #serverDomain: hAdmin.getHAdmin().serverDomain
         publisher: @actor
         sid: client.id
 
