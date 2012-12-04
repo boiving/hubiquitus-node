@@ -131,7 +131,7 @@ exports.validateHMessage = (hMessage, cb) ->
         unless channel
           return cb(codes.NOT_AVAILABLE, "the channel does not exist")
         if channel.active is false
-          cb codes.NOT_AUTHORIZED, "the channel is inactive"
+          return cb codes.NOT_AUTHORIZED, "the channel is inactive"
 
 
   cb codes.OK

@@ -25,6 +25,7 @@
 
 url = require "url"
 zmq = require "zmq"
+validator = require "./validator"
 
 class Adapter
 
@@ -218,7 +219,7 @@ class LBSocketOutboundAdapter extends OutboundAdapter
 class ChannelOutboundAdapter extends OutboundAdapter
 
   constructor: (props) ->
-    props.targetActorAid = "#{props.owner.actor}#subscribers"
+    props.targetActorAid = "#{validator.getBareJID(props.owner.actor)}#subscribers"
     super
     if props.url
     then @url = props.url

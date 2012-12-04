@@ -6,6 +6,8 @@
             "actor": "#trackChannel@localhost",
             "type": "hchannel",
             "method": "inproc",
+            "subscribers": [],
+            "active":true,
             "outboundAdapters": [ { "type": "channel", "url": "tcp://127.0.0.1:2998" } ]
         },
         {

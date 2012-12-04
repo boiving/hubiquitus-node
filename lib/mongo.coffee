@@ -296,6 +296,17 @@ class Db extends EventEmitter
     else
       callback()
 
+  ###
+  Remove a hChannel to the database.
+  @param hChannel - hChannel to remove
+  @param cb - [Optional] Callback that receives (err, result)
+  ###
+  removeHChannel: (hChannel, cb) ->
+    #Use 'virtual' hMessages collection to test requirements. But when saving use real collection
+    collection = @get("hChannels")
+
+    collection.remove {_id: hChannel}, cb
+
 
   ###
   Saves a hMessage to the correct collection in the database. The CHID of the hMessage will *not*

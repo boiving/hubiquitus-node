@@ -34,8 +34,17 @@ class Channel extends Actor
 
   constructor: (props) ->
     super
+    @actor = validator.getBareJID(props.actor)
     @type = "channel"
     @subscribersAlias = "#{@actor}#subscribers"
+    @chdesc = props.chdesc
+    @priority = props.priority or 1
+    @location = props.location
+    @owner = props.owner
+    @subscribers = props.subscribers or []
+    @active = props.active
+    @headers = props.headers
+    @filter = props.filter or {}
 
   onMessage: (hMessage) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
@@ -43,8 +52,11 @@ class Channel extends Actor
     try
       validator.validateHMessage hMessage, (err, result) =>
         if err
-          @log "debug", "hMessage not conform : ",result
+          @log "debug", "hMessage not conform : "+JSON.stringify(result)
         else
+          hMessage.location = hMessage.location or @location;
+          hMessage.priority = hMessage.priority or @priority or 1;
+
           #Complete missing values (msgid added later)
           hMessage.convid = (if not hMessage.convid or hMessage.convid is hMessage.msgid then hMessage.msgid else hMessage.convid)
           hMessage.published = hMessage.published or new Date()
@@ -52,34 +64,51 @@ class Channel extends Actor
           #Empty location and headers should not be sent/saved.
           validator.cleanEmptyAttrs hMessage, ["headers", "location"]
 
-          if hMessage.persistent is true
-            timeout = hMessage.timeout
-            hMessage._id = hMessage.msgid
-
-            delete hMessage.persistent
-            delete hMessage.msgid
-            delete hMessage.timeout
-
-            dbPool.getDb "admin", (dbInstance) ->
-              dbInstance.saveHMessage hMessage
-
-            hMessage.persistent = true
-            hMessage.msgid = hMessage._id
-            hMessage.timeout = timeout
-            delete hMessage._id
-
-          if hMessage.type is "hCommand" and hMessage.actor is @actor
+          if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is @actor
             @runCommand(hMessage)
           else
             @receive(hMessage)
     catch error
       @log "warn", "An error occured while processing incoming message: "+error
 
-  receive: (message) ->
-    # TODO persit the message if necessary
+  receive: (hMessage) ->
+    if hMessage.persistent is true
+      timeout = hMessage.timeout
+      hMessage._id = hMessage.msgid
+
+      delete hMessage.persistent
+      delete hMessage.msgid
+      delete hMessage.timeout
+
+      dbPool.getDb "admin", (dbInstance) ->
+        dbInstance.saveHMessage hMessage
+
+      hMessage.persistent = true
+      hMessage.msgid = hMessage._id
+      hMessage.timeout = timeout
+      delete hMessage._id
     #sends to all subscribers the message received
-    message.publisher = @actor
-    @send @buildMessage(@subscribersAlias, message.type, message.payload)
+    hMessage.publisher = @actor
+    @send @buildMessage(@subscribersAlias, hMessage.type, hMessage.payload)
+
+  ###*
+  Function that stops the actor, including its children and adapters
+  ###
+  stop: ->
+    @setStatus "stopping"
+    #Remove channel from database
+    dbPool.getDb "admin", (dbInstance) =>
+      dbInstance.removeHChannel @actor
+
+    # Stop children first
+    _.forEach @state.children, (childAid) =>
+      @send @buildMessage(childAid, "hCommand", CMD_STOP, {persistent:false})
+    # Stop adapters second
+    _.invoke @state.inboundAdapters, "stop"
+    _.invoke @state.outboundAdapters, "stop"
+    @setStatus "stopped"
+    @removeAllListeners()
+
 
 exports.Channel = Channel
 exports.newActor = (props) ->

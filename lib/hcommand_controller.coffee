@@ -142,7 +142,7 @@ class Controller
         #Set it to null to test if cb is executed after timeout
         timerObject = null
         hMessageResult = self.createResult(hMessage, hResultStatus.EXEC_TIMEOUT)
-        log.warn "hCommand Controller sent hMessage with exceed timeout error", hMessageResult
+        log.debug "hCommand Controller sent hMessage with exceed timeout error", hMessageResult
         cb hMessageResult
       , commandTimeout)
 

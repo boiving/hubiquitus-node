@@ -72,6 +72,8 @@ class Tracker extends Actor
         result = "Actor not found"
 
       msg = @buildResult(message.publisher, message.msgid, status, result)
+      console.log "send result ",result
+      console.log "out ",@state.outboundAdapters
       @send msg
 
   initChildren: (children)->
@@ -110,9 +112,7 @@ class Tracker extends Actor
         if lb_peers.peerStatus is "started"
           _.forEach lb_peers.peerInbox, (inbox) =>
             if inbox.type is "socket"
-              console.log "inbox ",inbox
               outboundadapter = {type: inbox.type, targetActorAid: lb_peers.peerFullId, url: inbox.url}
-              console.log "tou", outboundadapter
 
     outboundadapter
 
@@ -120,7 +120,7 @@ class Tracker extends Actor
     if @state.askPeer[actor]
       for asker in @state.askPeer[actor]
         msg = @buildMessage(asker, "hStopAlert", {actoraid:actor})
-        send msg
+        @send msg
 
 exports.Tracker = Tracker
 exports.newActor = (props) ->

@@ -127,7 +127,7 @@ class Actor extends EventEmitter
     try
       validator.validateHMessage hMessage, (err, result) =>
         if err
-          @log "debug", "hMessage not conform : ",result
+          @log "debug", "hMessage not conform : ",JSON.stringify(result)
         else
           #Complete missing values (msgid added later)
           hMessage.convid = (if not hMessage.convid or hMessage.convid is hMessage.msgid then hMessage.msgid else hMessage.convid)
@@ -153,16 +153,14 @@ class Actor extends EventEmitter
       when "stop"
         @stop()
       else
-        @cmdController.execCommand hMessage, (result) ->
+        @cmdController.execCommand hMessage, (result) =>
           if hMessage.timeout is 0
-            console.log "result 1 : ",result
-            log.debug "the sender doesn't want callback"
-          else if limitDate.getTime() - currentDate.getTime() <= 0
-            console.log "result 2 : ",result
-            log.debug "Exceed client timeout, no callback send"
+            @log "debug", "the sender doesn't want callback"
+          #else if limitDate.getTime() - currentDate.getTime() <= 0
+          #  console.log "result 2 : ",result
+          #  @log "debug", "Exceed client timeout, no callback send"
           else
-            console.log "result 3 : ",result
-            #cb result
+            @send result
 
 
   receive: (hMessage) ->
@@ -215,8 +213,6 @@ class Actor extends EventEmitter
           ), timeout
         else
           hMessage.timeout = 0
-      else
-        hMessage.timeout = 0
 
       #Send it to transport
       @log "debug", "Sending message: #{JSON.stringify(hMessage)}"
@@ -241,7 +237,8 @@ class Actor extends EventEmitter
     unless props.trackers then props.trackers = @state.trackers
 
     # prefixing actor's id automatically
-    props.actor = "#{props.actor}/#{UUID.generate()}"
+    unless classname is "hchannel"
+      props.actor = "#{props.actor}/#{UUID.generate()}"
 
     switch method
       when "inproc"
