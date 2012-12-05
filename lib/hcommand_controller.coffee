@@ -79,13 +79,12 @@ class Controller
     #Try to load Module ignoring case
     fileNames = fs.readdirSync(modulePath)
     regex = new RegExp(module, "i")
-    i = 0
 
-    while i < fileNames.length
-      if regex.test(fileNames[i])
-        module = require(path.resolve(path.join(modulePath, fileNames[i]))).Command
+    for name in fileNames
+      if regex.test(name)
+        module = require(path.resolve(path.join(modulePath, name))).Command
         return new module()
-      i++
+
     null
 
 

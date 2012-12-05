@@ -36,11 +36,9 @@ exports.validateHChannel = (hChannel, cb) ->
     return cb(codes.INVALID_ATTR, "invalid object received")
 
   #Test required attributes
-  i = 0
-  while i < required.length
-    if not hChannel[required[i]]? or hChannel[required[i]] is `undefined`
-      return cb(codes.MISSING_ATTR, "missing attribute " + required[i])
-    i++
+  for attribute in required
+    if not hChannel[attribute]? or hChannel[attribute] is `undefined`
+      return cb(codes.MISSING_ATTR, "missing attribute " + attribute)
 
   #Test if correct format/ correct values
   if hChannel._id and typeof hChannel._id isnt "string"
@@ -66,11 +64,9 @@ exports.validateHChannel = (hChannel, cb) ->
     return cb(codes.INVALID_ATTR, "owner is not a bare jid")
   unless hChannel.subscribers instanceof Array
     return cb(codes.INVALID_ATTR, "subscribers is not an array")
-  i = 0
-  while i < hChannel.subscribers.length
-    if not exports.validateJID(hChannel.subscribers[i]) or exports.splitJID(hChannel.subscribers[i])[2]
+  for subscriber in hChannel.subscribers
+    if not exports.validateJID(subscriber) or exports.splitJID(subscriber)[2]
       return cb(codes.INVALID_ATTR, "subscriber " + i + " is not a JID")
-    i++
   if typeof hChannel.active isnt "boolean"
     return cb(codes.INVALID_ATTR, "active is not a boolean")
   if typeof hChannel.headers isnt "undefined" and (hChannel.headers not instanceof Object)
@@ -155,9 +151,12 @@ Removes attributes that are strings and that are empty (ie. "") in hLocation
 @param obj - Object that has the object attributes
 ###
 exports.cleanLocationAttrs = (obj) ->
+  console.log "ob ",objs
   for key of obj
-    obj[key] = exports.cleanLocationAttrs(obj[key])  if key is "pos"
-    delete obj[key]  if obj[key] is ""
+    if key is "pos"
+      obj[key] = exports.cleanLocationAttrs(obj[key])
+    if obj[key] is ""
+      delete obj[key]
   obj
 
 ###
@@ -168,19 +167,24 @@ It also removes attributes that are strings and that are empty (ie. "")
 ###
 exports.cleanEmptyAttrs = (obj, attrs) ->
   found = undefined
-  i = 0
 
-  while i < attrs.length
+  for cleanAttr in attrs
     found = false
 
     # Search if object has attributes
-    if obj[attrs[i]] instanceof Object
-      for attr of obj[attrs[i]]
-        obj[attrs[i]] = exports.cleanLocationAttrs(obj[attrs[i]])  if attrs[i] is "location"
-        found = true  if obj[attrs[i]].hasOwnProperty(attr)
-    else found = true  if typeof obj[attrs[i]] is "string" and obj[attrs[i]] isnt ""
-    delete obj[attrs[i]]  unless found
-    i++
+    if obj[cleanAttr] instanceof Object
+      for attr of obj[cleanAttr]
+        if cleanAttr is "location"
+          console.log "here"
+          obj[cleanAttr] = exports.cleanLocationAttrs(obj[cleanAttr])
+        if obj[cleanAttr].hasOwnProperty(attr)
+          found = true
+    else if typeof obj[cleanAttr] is "string" and obj[cleanAttr] isnt ""
+      found = true
+
+    unless found
+      delete obj[attr]
+
   obj #Make it chainable
 
 ###

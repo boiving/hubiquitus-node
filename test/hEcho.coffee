@@ -22,45 +22,52 @@
 # *    You should have received a copy of the MIT License along with Hubiquitus.
 # *    If not, see <http://opensource.org/licenses/mit-license.php>.
 #
+should = require("should")
+config = require("./_config")
 
-{Actor} = require "./hactor"
-adapters = require "../client_connector/socketio_connector"
-zmq = require "zmq"
-_ = require "underscore"
-validator = require "./../validator"
+describe "hEcho", ->
+  echoCmd = undefined
+  hEcho = undefined
+  hActor = undefined
+  status = require("../lib/codes").hResultStatus
+  actorModule = require("../lib/actor/hactor")
 
-class Gateway extends Actor
+  before () ->
+    topology = {
+      actor: config.logins[0].jid,
+      type: "hactor"
+    }
+    hActor = actorModule.newActor(topology)
 
-  constructor: (props) ->
-    super
-    # Setting outbound adapters
-    @type = 'gateway'
-    if props.sIOAdapterPort
-      adapterProps = {}
-      adapterProps.port = props.sIOAdapterPort
-      adapterProps.owner = @
-      adapters.sIOAdapter(adapterProps)
+  after () ->
+    hActor.stop()
+    hActor = null
 
-  onMessageInternal: (hMessage) ->
-    @log "debug", "onMessage :"+JSON.stringify(hMessage)
+  beforeEach (done) ->
+    echoCmd = config.makeHMessage(hActor.actor, config.logins[0].jid, "hCommand", {})
+    echoCmd.payload =
+      cmd: "hEcho"
+      params:
+        hello: "world"
+    done()
 
-    try
-      validator.validateHMessage hMessage, (err, result) =>
-        if err
-          @log "debug", "hMessage not conform : ",result
-        else
-          if hMessage.type is "hCommand" and hMessage.actor is @actor
-            @runCommand(hMessage)
-          else
-            @receive(hMessage)
-    catch error
-      @log "warn", "An error occured while processing incoming message: "+error
-
-  receive: (hMessage) ->
-    @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
-    @send hMessage
+  it "should return hResult error if the hMessage can not be treat", (done) ->
+    echoCmd.payload.params.error = "DIV0"
+    hActor.onMessageInternal echoCmd, (hMessage) ->
+      hMessage.should.have.property "ref", echoCmd.msgid
+      hMessage.payload.should.have.property "status", status.TECH_ERROR
+      done()
 
 
-exports.Gateway = Gateway
-exports.newActor = (props) ->
-  new Gateway(props)
+  describe "#Execute hEcho", ->
+    it "should emit result echoing input", (done) ->
+      hActor.onMessageInternal echoCmd, (hMessage) ->
+        console.log "hMessage : ",hMessage
+        should.exist hMessage.payload.status
+        should.exist hMessage.payload.result
+        hMessage.payload.status.should.be.equal status.OK
+        hMessage.payload.result.should.be.equal echoCmd.payload.params
+        done()
+
+
+

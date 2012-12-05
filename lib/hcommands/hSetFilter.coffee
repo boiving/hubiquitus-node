@@ -22,45 +22,35 @@
 # *    You should have received a copy of the MIT License along with Hubiquitus.
 # *    If not, see <http://opensource.org/licenses/mit-license.php>.
 #
+status = require("../codes").hResultStatus
+validator = require("../validator")
+hFilter = require("../hFilter")
 
-{Actor} = require "./hactor"
-adapters = require "../client_connector/socketio_connector"
-zmq = require "zmq"
-_ = require "underscore"
-validator = require "./../validator"
-
-class Gateway extends Actor
-
-  constructor: (props) ->
-    super
-    # Setting outbound adapters
-    @type = 'gateway'
-    if props.sIOAdapterPort
-      adapterProps = {}
-      adapterProps.port = props.sIOAdapterPort
-      adapterProps.owner = @
-      adapters.sIOAdapter(adapterProps)
-
-  onMessageInternal: (hMessage) ->
-    @log "debug", "onMessage :"+JSON.stringify(hMessage)
-
-    try
-      validator.validateHMessage hMessage, (err, result) =>
-        if err
-          @log "debug", "hMessage not conform : ",result
-        else
-          if hMessage.type is "hCommand" and hMessage.actor is @actor
-            @runCommand(hMessage)
-          else
-            @receive(hMessage)
-    catch error
-      @log "warn", "An error occured while processing incoming message: "+error
-
-  receive: (hMessage) ->
-    @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
-    @send hMessage
+hSetFilter = ->
 
 
-exports.Gateway = Gateway
-exports.newActor = (props) ->
-  new Gateway(props)
+###
+Method executed each time an hCommand with cmd = 'hSetFilter' is received.
+Once the execution finishes we should call the callback.
+@param hCommand - hCommand received with cmd = 'hSetFilter'
+@param context - Auxiliary functions,attrs from the controller.
+@param cb(status, result) - function that receives arg:
+status: //Constant from var status to indicate the result of the hCommand
+###
+hSetFilter::exec = (hMessage, context, cb) ->
+  hCommand = hMessage.payload
+  cmd = hCommand.params
+  if not cmd or (cmd not instanceof Object)
+    return cb(status.INVALID_ATTR, "invalid params for the command")
+
+  checkFormat = hFilter.checkFilterFormat(cmd)
+
+  if checkFormat.result is true
+    unless context.hActor.filter
+      context.hActor.filter = {}
+    context.hActor.filter = cmd
+    cb status.OK
+  else
+    cb status.INVALID_ATTR, checkFormat.error
+
+exports.Command = hSetFilter

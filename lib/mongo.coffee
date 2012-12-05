@@ -103,14 +103,11 @@ class Db extends EventEmitter
         unless err
 
           #load static collections
-          i = 0
-
-          while i < self._staticCol.length
-            self.collections[self._staticCol[i]] = db.collection(self._staticCol[i])
-            self.collections[self._staticCol[i]].required = {}
-            self.collections[self._staticCol[i]].validators = []
-            self.collections[self._staticCol[i]].onSave = []
-            i++
+          for staticCol in self._staticCol
+            self.collections[staticCol] = db.collection(staticCol)
+            self.collections[staticCol].required = {}
+            self.collections[staticCol].validators = []
+            self.collections[staticCol].onSave = []
 
           #Init validators for collections and tell everyone that we are ready to go
           self._initDefaultCollections ->
@@ -195,11 +192,10 @@ class Db extends EventEmitter
       onSave = (if options.virtual then options.virtual.onSave else collection.onSave)
       unless err
         log.debug "Correctly saved to mongodb", result
-        i = 0
 
-        while i < onSave.length
-          onSave[i] savedElem
-          i++
+        for save in onSave
+          save savedElem
+
         (if typeof cb is "function" then cb(err, savedElem) else null)
       else
         log.debug "Error saving in mongodb", err
@@ -233,11 +229,10 @@ class Db extends EventEmitter
       onSave = (if options.virtual then options.virtual.onSave else collection.onSave)
       unless err
         log.debug "Correctly updated document from mongodb", result
-        i = 0
 
-        while i < onSave.length
-          onSave[i] savedElem
-          i++
+        for save in onSave
+          save savedElem
+
         (if typeof cb is "function" then cb(err, savedElem) else null)
       else
         log.debug "Error updating document in mongodb", err
@@ -260,16 +255,14 @@ class Db extends EventEmitter
 
     #In case we don't validate anything
     cb()  if validators.length is 0
-    i = 0
 
-    while i < validators.length
-      validators[i] doc, (err, msg) ->
+    for validator in validators
+      validator doc, (err, msg) ->
         if err and first
           first = false
           cb err, msg
         else cb()  if ++counter is validators.length
 
-      i++
 
 
   ###

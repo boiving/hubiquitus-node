@@ -44,9 +44,8 @@ class Channel extends Actor
     @subscribers = props.subscribers or []
     @active = props.active
     @headers = props.headers
-    @filter = props.filter or {}
 
-  onMessage: (hMessage) ->
+  onMessageInternal: (hMessage) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
 
     try

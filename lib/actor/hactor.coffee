@@ -37,6 +37,7 @@ validator = require "./../validator"
 codes = require "./../codes.coffee"
 options = require "./../options"
 cmdControllerConst = require('./../hcommand_controller').Controller
+hFilter = require "./../hFilter"
 
 _.mixin toDict: (arr, key) ->
   throw new Error('_.toDict takes an Array') unless _.isArray arr
@@ -49,6 +50,8 @@ _.mixin toDict: (arr, key) ->
 ###
 class Actor extends EventEmitter
 
+  logger.remove(logger.transports.Console);
+  logger.add(logger.transports.Console, {level: "INFO"});
 # Possible running states of an actor
   STATUS_STARTING = "starting"
   STATUS_STARTED = "started"
@@ -69,6 +72,7 @@ class Actor extends EventEmitter
     else
       throw new Error "Invalid actor JID"
     @type = "actor"
+    @filter = props.filter or {}
     @msgToBeAnswered = {}
 
     # Initializing state
@@ -122,8 +126,11 @@ class Actor extends EventEmitter
       @initChildren(props.children)
 
   onMessage: (hMessage) ->
-    @log "debug", "onMessage :"+JSON.stringify(hMessage)
+    @onMessageInternal hMessage, (hMessageResult) ->
+      @send hMessageResult
 
+  onMessageInternal: (hMessage, cb) ->
+    @log "debug", "onMessage :"+JSON.stringify(hMessage)
     try
       validator.validateHMessage hMessage, (err, result) =>
         if err
@@ -137,15 +144,22 @@ class Actor extends EventEmitter
           validator.cleanEmptyAttrs hMessage, ["headers", "location"]
 
           if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
-            @runCommand(hMessage)
+            @runCommand(hMessage, cb)
           else if hMessage.type is "hStopAlert"
             @removePeer(hMessage.payload.actoraid)
           else
-            @receive(hMessage)
+            #Check if hMessage respect filter
+            checkValidity = hFilter.checkFilterValidity(hMessage, @filter)
+            if checkValidity.result is true
+              @receive(hMessage, cb)
+            else
+              hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.INVALID_ATTR, checkValidity.error)
+              cb hMessageResult
+
     catch error
       @log "warn", "An error occured while processing incoming message: "+error
 
-  runCommand: (hMessage) ->
+  runCommand: (hMessage, cb) ->
     #case of a command
     switch hMessage.payload.cmd
       when "start"
@@ -160,11 +174,14 @@ class Actor extends EventEmitter
           #  console.log "result 2 : ",result
           #  @log "debug", "Exceed client timeout, no callback send"
           else
-            @send result
+            cb result
 
 
-  receive: (hMessage) ->
+  receive: (hMessage, cb) ->
     @log "info", "Message reveived: #{JSON.stringify(hMessage)}"
+    unless hMessage.timeout is 0
+      hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.OK, "")
+      cb hMessageResult
 
   send: (hMessage, cb) ->
     unless _.isString(hMessage.actor) then throw new Error "'aid' parameter must be a string"

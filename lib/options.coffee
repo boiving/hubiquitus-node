@@ -43,15 +43,14 @@ createOptions = () ->
       file = fs.readFileSync(args[argsIt + 1], "utf8")
       file = file.split("\n")
       args = args.splice(argsIt + 2)
-      argsIt = 0
-      while argsIt < file.length
-        args = (args.concat(file[argsIt].split(RegExp(" *= *"))))  if not file[argsIt].match(RegExp(" *#.*")) and not file[argsIt].match(/^ *$/)
-        argsIt++
+
+      for fileArgs in file
+        args = (args.concat(fileArgs.split(RegExp(" *= *"))))  if not fileArgs.match(RegExp(" *#.*")) and not fileArgs.match(/^ *$/)
 
     #Normalize options
     tempArray = undefined
-    i = 0
 
+    i = 0
     while i < args.length - 1
       args[i] = args[i].replace(/-*/, "").toLowerCase()
       tempArray = args[i + 1].split(",")
@@ -90,7 +89,7 @@ overrideOptions = (options) ->
   _opts =
 
   #Possible values are DEBUG, INFO, WARN or ERROR
-    "global.loglevel": options["global.loglevel"] or "WARN"
+    "global.loglevel": options["global.loglevel"] or "INFO"
 
     #A different instance will be created for each port
     "socket.io.ports": options["socket.io.ports"] or [8080]
