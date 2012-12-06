@@ -1,4 +1,7 @@
 ## MORE INFORMATIONS COMING SOON
+We actually are developping a new version of hubiquitus-node.
+The version above is a dev version which not contain all the hubiquitus function.
+If you want use a complete version, you can use the v0.5 branch or a tag's version.
 
 ## License 
 

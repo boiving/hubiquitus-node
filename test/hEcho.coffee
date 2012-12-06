@@ -27,7 +27,6 @@ config = require("./_config")
 
 describe "hEcho", ->
   echoCmd = undefined
-  hEcho = undefined
   hActor = undefined
   status = require("../lib/codes").hResultStatus
   actorModule = require("../lib/actor/hactor")
@@ -62,7 +61,6 @@ describe "hEcho", ->
   describe "#Execute hEcho", ->
     it "should emit result echoing input", (done) ->
       hActor.onMessageInternal echoCmd, (hMessage) ->
-        console.log "hMessage : ",hMessage
         should.exist hMessage.payload.status
         should.exist hMessage.payload.result
         hMessage.payload.status.should.be.equal status.OK

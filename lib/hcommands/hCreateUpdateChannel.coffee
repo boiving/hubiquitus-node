@@ -62,56 +62,54 @@ hCreateUpdateChannel::exec = (hMessage, context, cb) ->
   if checkFormat.result is false
     return cb status.INVALID_ATTR, checkFormat.error
 
-  db = dbPool.getDb('admin');
   existingChannel = undefined
+  dbPool.getDb "admin", (dbInstance) ->
+    stream = dbInstance.get("hChannels").find({_id: channel.actor}).streamRecords()
+    stream.on "data", (hChannel) ->
+      hChannel.actor = hChannel._id
+      delete hChannel._id
 
-  stream = db.get("hChannels").find({_id: channel.actor}).streamRecords()
-  stream.on "data", (hChannel) ->
-    hChannel.actor = hChannel._id
-    delete hChannel._id
+      existingChannel = hChannel
 
-    existingChannel = hChannel
+    stream.on "end", ->
+      #Verify if trying to change owner
+      if existingChannel and not existingChannel.owner.match(channel.owner)
+        return cb status.NOT_AUTHORIZED, "trying to change owner"
 
-  stream.on "end", ->
-    #Verify if trying to change owner
-    if existingChannel and not existingChannel.owner.match(channel.owner)
-      return cb status.NOT_AUTHORIZED, "trying to change owner"
+      ###If subscribers were removed, unsubscribe them
+      unsubscriber = new unsubscriberModule()
 
-    ###If subscribers were removed, unsubscribe them
-    unsubscriber = new unsubscriberModule()
+      #copy message for unsubscribe
+      unsubscribeMsg = {}
+      Object.getOwnPropertyNames(hMessage).forEach (name) ->
+        unsubscribeMsg[name] = hMessage[name]
 
-    #copy message for unsubscribe
-    unsubscribeMsg = {}
-    Object.getOwnPropertyNames(hMessage).forEach (name) ->
-      unsubscribeMsg[name] = hMessage[name]
+      unsubscribeMsg.type = "hCommand"
+      unsubscribeMsg.payload = {}
+      if existingChannel
+        i = 0
 
-    unsubscribeMsg.type = "hCommand"
-    unsubscribeMsg.payload = {}
-    if existingChannel
-      i = 0
+        while i < existingChannel.subscribers.length
+          if channel["subscribers"].indexOf(existingChannel.subscribers[i]) < 0
+            unsubscribeMsg.publisher = existingChannel.subscribers[i]
+            unsubscribeMsg.payload.params = actor: channel.actor
+            unsubscriber.exec unsubscribeMsg, context, (status, result) ->
+        i++
+      ###
+      #Set received channel as our _id
+      channel._id = channel.actor
+      delete channel.actor
 
-      while i < existingChannel.subscribers.length
-        if channel["subscribers"].indexOf(existingChannel.subscribers[i]) < 0
-          unsubscribeMsg.publisher = existingChannel.subscribers[i]
-          unsubscribeMsg.payload.params = actor: channel.actor
-          unsubscriber.exec unsubscribeMsg, context, (status, result) ->
-      i++
-    ###
-    #Set received channel as our _id
-    channel._id = channel.actor
-    delete channel.actor
+      #Remove empty headers and location
+      validators.cleanEmptyAttrs channel, ["headers", "location", "chdesc"]
+      useValidators = undefined
 
-    #Remove empty headers and location
-    validators.cleanEmptyAttrs channel, ["headers", "location", "chdesc"]
-    useValidators = undefined
+      #If error with one of the getBareJID, ignore it, just use validation and we will get correct error
+      try
+        useValidators = validators.getBareJID(hMessage.publisher) isnt validators.getBareJID(hAdmin.jid)
+      catch err
+        useValidators = true
 
-    #If error with one of the getBareJID, ignore it, just use validation and we will get correct error
-    try
-      useValidators = validators.getBareJID(hMessage.publisher) isnt validators.getBareJID(hAdmin.jid)
-    catch err
-      useValidators = true
-
-    dbPool.getDb "admin", (dbInstance) ->
       dbInstance.saveHChannel channel, useValidators, (err, result) ->
         unless err
           #Updated

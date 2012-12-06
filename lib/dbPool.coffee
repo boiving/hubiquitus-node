@@ -37,16 +37,6 @@ dbInstances = {}
 
 class DbPool extends EventEmitter
   constructor: () ->
-    mongodb = new mongo()
-    mongodb.on "error", (err) ->
-      log.error "Error Connecting to database", err
-      process.exit 1
-
-
-    #Start connection to Mongo
-    mongodb.connect opts.options["mongo.URI"]
-    dbInstances[mongodb.db.databaseName] = mongodb
-
     log.debug "dbPool started"
     events.call this
 
@@ -84,10 +74,11 @@ class DbPool extends EventEmitter
       #Start connection to Mongo
       newInstance.connect uri, (db) ->
         i = 0
-        while i < newInstance.queue.length
-          cb = newInstance.queue.pop()
-          cb db
-          i++
+        if newInstance.queue
+          while i < newInstance.queue.length
+            cb = newInstance.queue.pop()
+            cb db
+            i++
 
       newInstance  unless cb
 
@@ -99,8 +90,3 @@ exports.getDbPool = () ->
   dbPoolSingleton
 
 
-#exports.db = dbPoolSingleton
-#exports.newdbPool = () ->
-#  dbPoolSingleton = new DbPool
-#exports.getDb = (dbName) ->
-#  @getDb(dbName)

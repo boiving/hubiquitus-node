@@ -75,9 +75,8 @@ class Db extends EventEmitter
   @param uri - address of the database in the form: mongodb://<host>[:port]/<db>
   @param opts - [Optional] options object as defined in http://mongodb.github.com/node-mongodb-native/api-generated/server.html
   ###
-  connect: (uri, opts) ->
+  connect: (uri, cb) ->
     self = @
-
     #Already connected
     if @status is codes.mongoCodes.CONNECTED
       @emit "connect"
@@ -95,7 +94,7 @@ class Db extends EventEmitter
       dbName = matches[4]
 
       #Create the Server and the DB to access mongo
-      @server = new mongo.Server(host, port, opts)
+      @server = new mongo.Server(host, port)
       @db = new mongo.Db(dbName, @server)
 
       #Connect to Mongo
@@ -113,6 +112,8 @@ class Db extends EventEmitter
           self._initDefaultCollections ->
             self.status = codes.mongoCodes.CONNECTED
             self.emit "connect"
+            if cb
+              cb self
 
           #Error opening database
         else
@@ -167,7 +168,6 @@ class Db extends EventEmitter
       self.cache.hChannels[hChannel._id] = hChannel
 
     stream.on "end", cb
-
   ###
   Saves an object to a collection.
   @param collection a db recovered collection (db.collection())

@@ -29,6 +29,7 @@ zmq = require "zmq"
 _ = require "underscore"
 validator = require "./../validator"
 dbPool = require("./../dbPool.coffee").getDbPool()
+hFilter = require "./../hFilter"
 
 class Channel extends Actor
 
@@ -45,7 +46,7 @@ class Channel extends Actor
     @active = props.active
     @headers = props.headers
 
-  onMessageInternal: (hMessage) ->
+  onMessageInternal: (hMessage, cb) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
 
     try
@@ -64,9 +65,15 @@ class Channel extends Actor
           validator.cleanEmptyAttrs hMessage, ["headers", "location"]
 
           if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is @actor
-            @runCommand(hMessage)
+            @runCommand(hMessage, cb)
           else
-            @receive(hMessage)
+            #Check if hMessage respect filter
+            checkValidity = hFilter.checkFilterValidity(hMessage, @filter)
+            if checkValidity.result is true
+              @receive(hMessage)
+            else
+              hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.INVALID_ATTR, checkValidity.error)
+              cb hMessageResult
     catch error
       @log "warn", "An error occured while processing incoming message: "+error
 

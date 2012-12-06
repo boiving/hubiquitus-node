@@ -126,7 +126,7 @@ class Actor extends EventEmitter
       @initChildren(props.children)
 
   onMessage: (hMessage) ->
-    @onMessageInternal hMessage, (hMessageResult) ->
+    @onMessageInternal hMessage, (hMessageResult) =>
       @send hMessageResult
 
   onMessageInternal: (hMessage, cb) ->
@@ -184,21 +184,33 @@ class Actor extends EventEmitter
       cb hMessageResult
 
   send: (hMessage, cb) ->
-    unless _.isString(hMessage.actor) then throw new Error "'aid' parameter must be a string"
+    unless _.isString(hMessage.actor)
+      if cb
+        cb @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.MISSING_ATTR, "actor is missing")
+        return
+      else
+        throw new Error "'aid' parameter must be a string"
     # first looking up for a cached adapter
     outboundAdapter = _.toDict( @state.outboundAdapters , "targetActorAid" )[hMessage.actor]
     if outboundAdapter
       @sending(hMessage, cb, outboundAdapter)
     else
-      msg = @buildMessage(@state.trackers[0].trackerId, "peer-search", {actor:hMessage.actor}, {timeout:5000, persistent:false})
-      @send msg, (hResult) =>
-        if hResult.payload.status is codes.hResultStatus.OK
-          outboundAdapter = adapters.outboundAdapter(hResult.payload.result.type, { targetActorAid: hResult.payload.result.targetActorAid, owner: @, url: hResult.payload.result.url })
-          @state.outboundAdapters.push outboundAdapter
-          hMessage.actor = hResult.payload.result.targetActorAid
-          @sending hMessage, cb, outboundAdapter
+      if @state.trackers[0]
+        msg = @buildMessage(@state.trackers[0].trackerId, "peer-search", {actor:hMessage.actor}, {timeout:5000, persistent:false})
+        @send msg, (hResult) =>
+          if hResult.payload.status is codes.hResultStatus.OK
+            outboundAdapter = adapters.outboundAdapter(hResult.payload.result.type, { targetActorAid: hResult.payload.result.targetActorAid, owner: @, url: hResult.payload.result.url })
+            @state.outboundAdapters.push outboundAdapter
+            hMessage.actor = hResult.payload.result.targetActorAid
+            @sending hMessage, cb, outboundAdapter
+          else
+            @log "debug", "Can't send hMessage : "+hResult.payload.result
+      else
+        if cb
+          cb @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.NOT_AVAILABLE, "Can't find actor")
+          return
         else
-          @log "debug", "Can't send hMessage : "+hResult.payload.result
+          throw new Error "Don't have any tracker for peer-searching"
 
   sending: (hMessage, cb, outboundAdapter) ->
     #Complete hCommand
@@ -262,6 +274,7 @@ class Actor extends EventEmitter
         actorModule = require "#{__dirname}/#{classname}"
         childRef = actorModule.newActor(props)
         @state.outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: props.actor , ref: childRef)
+        childRef.state.outboundAdapters.push adapters.outboundAdapter(method, owner: childRef.actor, targetActorAid: @actor , ref: @)
         # Starting the child
         @send @buildMessage(props.actor, "hCommand",  CMD_START, {persistent:false})
 

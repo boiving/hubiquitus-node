@@ -39,7 +39,6 @@ describe "hSetFilter", ->
 
   after () ->
     hActor.stop()
-    hActor = null
 
   beforeEach ->
     cmd = config.makeHMessage(hActor.actor, config.logins[0].jid, "hCommand", {})

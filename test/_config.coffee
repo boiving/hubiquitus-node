@@ -17,11 +17,9 @@ exports.validators = undefined
 exports.codes = undefined
 exports.db = undefined
 exports.cmdController = undefined
-exports.hClient = undefined
-exports.hAdminConst = undefined
 
 # Available vars
-exports.users = undefined
+exports.logins = undefined
 exports.cmdParams = undefined
 exports.mongoURI = undefined
 exports.validJID = undefined
@@ -29,18 +27,12 @@ exports.validDomain = undefined
 
 
 # Available functions
-exports.makeChanName = undefined
 exports.makeHMessage = undefined
-exports.makeHCommand = undefined
-exports.makeHResult = undefined
-exports.checkResultMsg = undefined
-exports.checkOkResultMsg = undefined
 exports.createChannel = undefined
-exports.subscribeToChannel = undefined
-exports.unsubscribeFromChannel = undefined
-exports.publishMsg = undefined
 exports.beforeFN = undefined
 exports.afterFN = undefined
+
+
 
 ###
 DO NOT TOUCH BELOW THIS LINE
@@ -54,11 +46,11 @@ validators = require('../lib/validator')
 cmdController = require('../lib/hcommand_controller').Controller
 winston = require('winston')
 
-#db = require('../lib/dbPool').getDbPool().getDb("test");
+db = require('../lib/dbPool').getDbPool().getDb("admin");
 
 exports.validators = validators
+exports.db = db
 exports.codes = codes
-#exports.db = db;
 exports.cmdController = cmdController
 
 validJID = 'u1@localhost'
@@ -109,6 +101,18 @@ exports.makeHMessage = (actor, publisher, type, payload) ->
     payload: payload
 
   hMessage
+
+exports.createChannel = (actor, subscribers, owner, active, done) ->
+  payload =
+    cmd: "hCreateUpdateChannel"
+    params:
+      type: "channel"
+      actor: actor
+      active: active
+      owner: owner
+      subscribers: subscribers
+
+  exports.makeHMessage(owner, owner, "hCommand", payload)
 
 
 UUID = ->

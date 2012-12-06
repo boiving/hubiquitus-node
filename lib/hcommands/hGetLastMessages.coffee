@@ -72,9 +72,9 @@ hGetLastMessages::exec = (hMessage, context, cb) ->
 
     stream.on "end", ->
       unless channel
-        return cb(codes.NOT_AVAILABLE, "the channel does not exist")
+        return cb(status.NOT_AVAILABLE, "the channel does not exist")
       if channel.active is false
-        return cb codes.NOT_AUTHORIZED, "the channel is inactive"
+        return cb status.NOT_AUTHORIZED, "the channel is inactive"
 
       if channel.subscribers.indexOf(sender) > -1 and channel.active is true
         if channel.headers
