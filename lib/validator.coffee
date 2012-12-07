@@ -65,12 +65,17 @@ exports.validateHChannel = (hChannel, cb) ->
   unless hChannel.subscribers instanceof Array
     return cb(codes.INVALID_ATTR, "subscribers is not an array")
   for subscriber in hChannel.subscribers
+    if typeof subscriber isnt "string"
+      return cb(codes.INVALID_ATTR, "subscriber " + i + " is not a JID")
     if not exports.validateJID(subscriber) or exports.splitJID(subscriber)[2]
+      console.log "erreur ",subscriber
       return cb(codes.INVALID_ATTR, "subscriber " + i + " is not a JID")
   if typeof hChannel.active isnt "boolean"
     return cb(codes.INVALID_ATTR, "active is not a boolean")
   if typeof hChannel.headers isnt "undefined" and (hChannel.headers not instanceof Object)
     return cb(codes.INVALID_ATTR, "invalid headers object received")
+  if hChannel.actor isnt hChannel.publisher
+    return cb status.NOT_AUTHORIZED, "You cannot create a channel for this actor"
   cb codes.OK
 
 ###
@@ -137,8 +142,8 @@ Returns true or false if it is a valid JID following hubiquitus standards
 @param jid - the jid string to validate
 ###
 exports.validateJID = (jid) ->
-  /(^[^@\/<>'"]+(@.+|$)|^[^#@]((?!@).)*$)/.test jid
-
+  #/(^[^@\/<>'"]+(@.+|$)|^[^#@]((?!@).)*$)/.test jid
+  new RegExp("^(?:([^@/<>'\"]+)@)([^@/<>'\"]+)(?:/([^/<>'\"]*))?$").test jid
 ###
 Returns true or false if it is a valid JID with ressource following hubiquitus standards
 @param jid - the jid string to validate
