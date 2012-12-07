@@ -102,7 +102,7 @@ exports.makeHMessage = (actor, publisher, type, payload) ->
 
   hMessage
 
-exports.createChannel = (actor, subscribers, owner, active, done) ->
+exports.createChannel = (actor, subscribers, owner, active) ->
   payload =
     cmd: "hCreateUpdateChannel"
     params:
@@ -114,6 +114,8 @@ exports.createChannel = (actor, subscribers, owner, active, done) ->
 
   exports.makeHMessage(owner, owner, "hCommand", payload)
 
+exports.getUUID = () ->
+  UUID.generate()
 
 UUID = ->
 UUID.generate = ->

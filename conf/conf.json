@@ -14,17 +14,16 @@
             "actor": "gateway@localhost",
             "type": "hgateway",
             "method": "inproc",
-            "children": [
-                {
-                    "actor": "dispatcher@localhost",
-                    "type": "hdispatcher",
-                    "method": "inproc",
-                    "workers": { "method": "fork", "type": "hactor", "nb": 2 },
-                    "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:2992" } ]
-                }
-            ],
+            "children": [],
             "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:3993" } ],
             "sIOAdapterPort": 8080
+        },
+        {
+            "actor": "dispatcher@localhost",
+            "type": "hdispatcher",
+            "method": "inproc",
+            "workers": { "method": "fork", "type": "hactor", "nb": 2 },
+            "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:2992" } ]
         }
     ],
     "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:2997" } ]

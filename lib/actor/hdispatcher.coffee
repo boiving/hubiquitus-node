@@ -44,7 +44,7 @@ class Dispatcher extends Actor
       @log "debug", "Adding a new worker #{i}"
       @createChild workerProps.type, workerProps.method, actor: "worker#{i}@localhost", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }], #{type: "channel", url: "tcp://*:2998"} ]
 
-  onMessageInternal: (hMessage) ->
+  onMessageInternal: (hMessage, cb) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
 
     try
@@ -53,7 +53,7 @@ class Dispatcher extends Actor
           @log "debug", "hMessage not conform : ",result
         else
           if hMessage.type is "hCommand" and hMessage.actor is @actor
-            @runCommand(hMessage)
+            @runCommand(hMessage, cb)
           else
             @receive(hMessage)
     catch error

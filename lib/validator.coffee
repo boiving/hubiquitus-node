@@ -151,7 +151,6 @@ Removes attributes that are strings and that are empty (ie. "") in hLocation
 @param obj - Object that has the object attributes
 ###
 exports.cleanLocationAttrs = (obj) ->
-  console.log "ob ",objs
   for key of obj
     if key is "pos"
       obj[key] = exports.cleanLocationAttrs(obj[key])
@@ -175,7 +174,6 @@ exports.cleanEmptyAttrs = (obj, attrs) ->
     if obj[cleanAttr] instanceof Object
       for attr of obj[cleanAttr]
         if cleanAttr is "location"
-          console.log "here"
           obj[cleanAttr] = exports.cleanLocationAttrs(obj[cleanAttr])
         if obj[cleanAttr].hasOwnProperty(attr)
           found = true

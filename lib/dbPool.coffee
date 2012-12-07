@@ -37,6 +37,8 @@ dbInstances = {}
 
 class DbPool extends EventEmitter
   constructor: () ->
+    log.remove(log.transports.Console)
+    log.add(log.transports.Console, {level: "INFO"})
     log.debug "dbPool started"
     events.call this
 

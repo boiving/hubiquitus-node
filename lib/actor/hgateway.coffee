@@ -41,7 +41,7 @@ class Gateway extends Actor
       adapterProps.owner = @
       adapters.sIOAdapter(adapterProps)
 
-  onMessageInternal: (hMessage) ->
+  onMessageInternal: (hMessage, cb) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
 
     try
@@ -50,7 +50,7 @@ class Gateway extends Actor
           @log "debug", "hMessage not conform : ",result
         else
           if hMessage.type is "hCommand" and hMessage.actor is @actor
-            @runCommand(hMessage)
+            @runCommand(hMessage, cb)
           else
             @receive(hMessage)
     catch error

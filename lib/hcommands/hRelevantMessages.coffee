@@ -44,7 +44,7 @@ hRelevantMessages::exec = (hMessage, context, cb) ->
     unless err
       channel = hMessage.actor
       hMessages = []
-      dbPool.getDb validator.getDomainJID(channel), (dbInstance) ->
+      dbPool.getDb "admin", (dbInstance) ->
         stream = dbInstance.get(channel).find(relevance:
           $gte: new Date()).sort(published: -1).skip(0).stream()
         stream.on "data", (localhMessage) ->
@@ -81,6 +81,6 @@ hRelevantMessages::validateCmd = (hMessage, context, cb) ->
         return cb(status.NOT_AUTHORIZED, "the channel actor is inactive")
       if channel.subscribers.indexOf(validator.getBareJID(hMessage.publisher)) < 0
         return cb(status.NOT_AUTHORIZED, "error recovering messages with current credentials")
-  cb()
+      cb()
 
 exports.Command = hRelevantMessages

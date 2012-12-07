@@ -441,7 +441,6 @@ exports.checkFilterValidity = (hMessage, hCondition) ->
             }
 
         when "geo"
-          console.log "filtre geo"
           #Adapted from http://www.movable-type.co.uk/scripts/latlong.html
           if not filter.geo.radius or typeof filter.geo.lat isnt "number" or typeof filter.geo.lng isnt "number" #Radius not set, lat or lng NaN, ignore test
             return {

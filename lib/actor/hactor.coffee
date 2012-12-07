@@ -50,8 +50,8 @@ _.mixin toDict: (arr, key) ->
 ###
 class Actor extends EventEmitter
 
-  logger.remove(logger.transports.Console);
-  logger.add(logger.transports.Console, {level: "INFO"});
+  logger.remove(logger.transports.Console)
+  logger.add(logger.transports.Console, {level: "INFO"})
 # Possible running states of an actor
   STATUS_STARTING = "starting"
   STATUS_STARTED = "started"

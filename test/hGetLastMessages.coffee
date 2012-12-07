@@ -29,10 +29,10 @@ describe "hGetLastMessages", ->
   hActor = undefined
   status = require("../lib/codes").hResultStatus
   actorModule = require("../lib/actor/hactor")
-  existingCHID = "#getLastMessages1@localhost"
-  chanWithHeader = "#getLastMessages2@localhost"
-  inactiveChan = "#getLastMessages3@localhost"
-  subsChan = "#getLastMessages4@localhost"
+  existingCHID = "##{config.getUUID()}@localhost"
+  chanWithHeader = "##{config.getUUID()}@localhost"
+  inactiveChan = "##{config.getUUID()}@localhost"
+  subsChan = "##{config.getUUID()}@localhost"
   DateTab = []
   maxMsgRetrieval = 6
 
@@ -49,7 +49,7 @@ describe "hGetLastMessages", ->
 
   before (done) ->
     @timeout 5000
-    createCmd = config.createChannel existingCHID, [config.validJID, config.logins[2].jid], config.validJID, true, done
+    createCmd = config.createChannel existingCHID, [config.validJID, config.logins[2].jid], config.validJID, true
     hActor.onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
@@ -57,7 +57,7 @@ describe "hGetLastMessages", ->
 
   before (done) ->
     @timeout 5000
-    createCmd = config.createChannel inactiveChan, [config.validJID, config.logins[2].jid], config.validJID, false, done
+    createCmd = config.createChannel inactiveChan, [config.validJID, config.logins[2].jid], config.validJID, false
     hActor.onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
@@ -65,7 +65,7 @@ describe "hGetLastMessages", ->
 
   before (done) ->
     @timeout 10000
-    createCmd = config.createChannel chanWithHeader, [config.validJID, config.logins[2].jid], config.validJID, true, done
+    createCmd = config.createChannel chanWithHeader, [config.validJID, config.logins[2].jid], config.validJID, true
     createCmd.payload.params.headers = {}
     createCmd.payload.params.headers =
       MAX_MSG_RETRIEVAL: "" + maxMsgRetrieval
@@ -88,7 +88,7 @@ describe "hGetLastMessages", ->
 
   before (done) ->
     @timeout 5000
-    createCmd = config.createChannel subsChan, [config.logins[2].jid], config.validJID, true, done
+    createCmd = config.createChannel subsChan, [config.logins[2].jid], config.validJID, true
     hActor.onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
