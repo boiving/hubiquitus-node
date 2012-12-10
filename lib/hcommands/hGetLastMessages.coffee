@@ -93,7 +93,7 @@ hGetLastMessages::exec = (hMessage, context, cb) ->
             hMessages.actor = localhMessage._id
             delete localhMessage._id
 
-            if localhMessage #and hFilter.checkFilterValidity(localhMessage, context.hClient.filter).result
+            if localhMessage and hFilter.checkFilterValidity(localhMessage, params.filter).result
               hMessages.push localhMessage
               stream.destroy()  if --quant is 0
 

@@ -37,12 +37,12 @@ class SocketIO_Connector
   commandOptions : {} Command Controller Options
   }
   ###
-  constructor: (props) ->
-    if props.owner
-    then @owner = props.owner
+  constructor: (properties) ->
+    if properties.owner
+    then @owner = properties.owner
     else throw new Error("You must pass an actor as reference")
 
-    io = require("socket.io").listen(props.port) #Creates the HTTP server
+    io = require("socket.io").listen(properties.port) #Creates the HTTP server
 
     logLevels =
       DEBUG: 3
@@ -80,7 +80,7 @@ class SocketIO_Connector
       return
     client.hClient = @owner
     inboundAdapters = []
-    for i in @owner.state.inboundAdapters
+    for i in @owner.inboundAdapters
       inboundAdapters.push {type:i.type, url:i.url}
 
     data.trackInbox = inboundAdapters
@@ -116,5 +116,5 @@ class SocketIO_Connector
     @started = false
 
 
-exports.sIOAdapter = (props) ->
-  new SocketIO_Connector(props)
+exports.socketIO = (properties) ->
+  new SocketIO_Connector(properties)

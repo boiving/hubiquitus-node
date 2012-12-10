@@ -31,18 +31,18 @@ validator = require "./../validator.coffee"
 
 class Tracker extends Actor
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    #TODO check props
-    @state.peers = []
-    @state.askPeer = {}
-    #@on "started", -> @pingChannel(props.broadcastUrl)
+    #TODO check properties
+    @peers = []
+    @askPeer = {}
+    #@on "started", -> @pingChannel(properties.broadcastUrl)
 
   receive: (message) ->
     @log "debug", "Tracker received a message: #{JSON.stringify(message)}"
     if message.type is "peer-info"
       existPeer = false
-      _.forEach @state.peers, (peers) =>
+      _.forEach @peers, (peers) =>
         if peers.peerFullId is message.publisher
           existPeer = true
           peers.peerStatus = message.payload.peerStatus
@@ -50,10 +50,10 @@ class Tracker extends Actor
           if peers.peerStatus is "stopping"
             @stopAlert(message.publisher)
       if existPeer isnt true
-        @state.peers.push {peerType:message.payload.peerType, peerFullId:message.publisher, peerId:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
+        @peers.push {peerType:message.payload.peerType, peerFullId:message.publisher, peerId:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
         outbox = @findOutbox(message.publisher)
         if outbox
-          @state.outboundAdapters.push adapters.outboundAdapter(outbox.type, { targetActorAid: outbox.targetActorAid, owner: @, url: outbox.url })
+          @outboundAdapters.push adapters.outboundAdapter(outbox.type, { targetActorAid: outbox.targetActorAid, owner: @, url: outbox.url })
 
     else if message.type is "peer-search"
       # TODO reflexion sur le lookup et implementation
@@ -62,25 +62,25 @@ class Tracker extends Actor
       if outboundadapter
         status = codes.OK
         result = outboundadapter
-        if @state.askPeer[message.payload.actor]
-          @state.askPeer[message.payload.actor].push (message.publisher)
+        if @askPeer[message.payload.actor]
+          @askPeer[message.payload.actor].push (message.publisher)
         else
-          @state.askPeer[message.payload.actor] = []
-          @state.askPeer[message.payload.actor].push (message.publisher)
+          @askPeer[message.payload.actor] = []
+          @askPeer[message.payload.actor].push (message.publisher)
       else
         status = codes.INVALID_ATTR
         result = "Actor not found"
 
       msg = @buildResult(message.publisher, message.msgid, status, result)
       console.log "send result ",result
-      console.log "out ",@state.outboundAdapters
+      console.log "out ",@outboundAdapters
       @send msg
 
   initChildren: (children)->
     _.forEach children, (childProps) =>
       childProps.trackers = [{
         trackerId : @actor,
-        trackerUrl : @state.inboundAdapters[0].url,
+        trackerUrl : @inboundAdapters[0].url,
         }]
       @createChild childProps.type, childProps.method, childProps
 
@@ -95,7 +95,7 @@ class Tracker extends Actor
 
   findOutbox: (actor) ->
     outboundadapter = undefined
-    _.forEach @state.peers, (peers) =>
+    _.forEach @peers, (peers) =>
       if peers.peerFullId is actor
         unless outboundadapter
           if peers.peerStatus is "started"
@@ -104,7 +104,7 @@ class Tracker extends Actor
                 outboundadapter = {type: inbox.type, targetActorAid: actor, url: inbox.url}
     unless outboundadapter
       outTab = []
-      _.forEach @state.peers, (peers) =>
+      _.forEach @peers, (peers) =>
         if peers.peerId is validator.getBareJID(actor)
           outTab.push(peers)
       if outTab.length > 0
@@ -117,11 +117,11 @@ class Tracker extends Actor
     outboundadapter
 
   stopAlert: (actor) ->
-    if @state.askPeer[actor]
-      for asker in @state.askPeer[actor]
+    if @askPeer[actor]
+      for asker in @askPeer[actor]
         msg = @buildMessage(asker, "hStopAlert", {actoraid:actor})
         @send msg
 
 exports.Tracker = Tracker
-exports.newActor = (props) ->
-  new Tracker(props)
+exports.newActor = (properties) ->
+  new Tracker(properties)

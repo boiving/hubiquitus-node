@@ -26,32 +26,38 @@ status = require("../codes").hResultStatus
 validator = require("../validator")
 hFilter = require("../hFilter")
 dbPool = require("../dbPool").getDbPool()
-
-hRelevantMessages = ->
+hGetThread = ->
 
 
   ###
-  Method executed each time an hCommand with cmd = 'hRelevantMessages' is received.
+  Method executed each time an hCommand with cmd = 'hGetThread' is received.
   Once the execution finishes we should call the callback.
-  @param hMessage - hMessage received with hCommand with cmd = 'hRelevantMessages'
+  @param hMessage - hMessage received with hCommand with cmd = 'hGetThread'
   @param context - Auxiliary functions,attrs from the controller.
   @param cb(status, result) - function that receives arg:
   status: //Constant from var status to indicate the result of the hCommand
-  result: //Array of relevant hMessages
+  result: //An [] of hMessages
   ###
-hRelevantMessages::exec = (hMessage, context, cb) ->
-  @validateCmd hMessage, context, (err, result) ->
+hGetThread::exec = (hMessage, context, cb) ->
+  @checkValidity hMessage, context, (err, result) ->
     unless err
-      channel = hMessage.actor
+      hCommand = hMessage.payload
       hMessages = []
+      actor = hMessage.actor
+      convid = hCommand.params.convid
+      sort = hCommand.params.sort or 1
+      sort = 1  if hCommand.params.sort isnt -1 and hCommand.params.sort isnt 1
       dbPool.getDb "admin", (dbInstance) ->
-        stream = dbInstance.get(channel).find(relevance:
-          $gte: new Date()).sort(published: -1).skip(0).stream()
+        stream = dbInstance.get(actor).find(convid: convid).sort(published: sort).skip(0).stream()
+        firstElement = true
         stream.on "data", (localhMessage) ->
+          localhMessage.actor = actor
           localhMessage.msgid = localhMessage._id
-          delete hMessage._id
+          delete localhMessage._id
 
-          hMessages.push localhMessage  if hFilter.checkFilterValidity(localhMessage, hMessage.payload.params.filter).result
+          stream.destroy()  if firstElement and hFilter.checkFilterValidity(localhMessage, hCommand.params.filter).result is false
+          firstElement = false
+          hMessages.push localhMessage
 
         stream.on "close", ->
           cb status.OK, hMessages
@@ -61,12 +67,20 @@ hRelevantMessages::exec = (hMessage, context, cb) ->
       cb err, result
 
 
-hRelevantMessages::validateCmd = (hMessage, context, cb) ->
+hGetThread::checkValidity = (hMessage, context, cb) ->
+  hCommand = hMessage.payload
+  if not hCommand.params or (hCommand.params not instanceof Object)
+    return cb(status.INVALID_ATTR, "invalid params object received")
   actor = hMessage.actor
+  convid = hCommand.params.convid
   unless actor
     return cb(status.MISSING_ATTR, "missing actor")
+  unless convid
+    return cb(status.MISSING_ATTR, "missing convid")
   unless validator.isChannel(actor)
     return cb(status.INVALID_ATTR, "actor is not a channel")
+  unless typeof convid is "string"
+    return cb(status.INVALID_ATTR, "convid is not a string")
 
   channel = undefined
   dbPool.getDb "admin", (dbInstance) ->
@@ -76,11 +90,11 @@ hRelevantMessages::validateCmd = (hMessage, context, cb) ->
 
     stream.on "end", ->
       unless channel
-        return cb(status.NOT_AVAILABLE, "the channel actor was not found")
+        return cb(status.NOT_AVAILABLE, "the channel " + actor + " was not found")
       unless channel.active
-        return cb(status.NOT_AUTHORIZED, "the channel actor is inactive")
+        return cb(status.NOT_AUTHORIZED, "the channel " + actor + " is inactive")
       if channel.subscribers.indexOf(validator.getBareJID(hMessage.publisher)) < 0
-        return cb(status.NOT_AUTHORIZED, "error recovering messages with current credentials")
+        return cb(status.NOT_AUTHORIZED, "the sender is not in the channel subscribers list")
       cb()
 
-exports.Command = hRelevantMessages
+exports.Command = hGetThread

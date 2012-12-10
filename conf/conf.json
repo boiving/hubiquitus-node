@@ -16,7 +16,7 @@
             "method": "inproc",
             "children": [],
             "inboundAdapters": [ { "type": "socket", "url": "tcp://127.0.0.1:3993" } ],
-            "sIOAdapterPort": 8080
+            "socketIOPort": 8080
         },
         {
             "actor": "dispatcher@localhost",

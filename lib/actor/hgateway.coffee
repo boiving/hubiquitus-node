@@ -24,22 +24,22 @@
 #
 
 {Actor} = require "./hactor"
-adapters = require "../client_connector/socketio_connector"
+socketIO = require "../client_connector/socketio_connector"
 zmq = require "zmq"
 _ = require "underscore"
 validator = require "./../validator"
 
 class Gateway extends Actor
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
     # Setting outbound adapters
     @type = 'gateway'
-    if props.sIOAdapterPort
+    if properties.socketIOPort
       adapterProps = {}
-      adapterProps.port = props.sIOAdapterPort
+      adapterProps.port = properties.socketIOPort
       adapterProps.owner = @
-      adapters.sIOAdapter(adapterProps)
+      socketIO.socketIO(adapterProps)
 
   onMessageInternal: (hMessage, cb) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
@@ -62,5 +62,5 @@ class Gateway extends Actor
 
 
 exports.Gateway = Gateway
-exports.newActor = (props) ->
-  new Gateway(props)
+exports.newActor = (properties) ->
+  new Gateway(properties)

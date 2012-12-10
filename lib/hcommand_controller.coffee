@@ -154,7 +154,7 @@ class Controller
         return cb(@context.hActor.buildResult(hMessage.publisher, hMessage.msgid, hResultStatus.TECH_ERROR, "error processing message : " + err))
     else
       #Module not found
-      hMessageResult = self.createResult(hMessage, hResultStatus.NOT_AVAILABLE)
+      hMessageResult = self.createResult(hMessage, hResultStatus.NOT_AVAILABLE, "Module not found")
       log.warn "hCommand Controller sent hMessage with module not found error", hMessageResult
       cb hMessageResult
 

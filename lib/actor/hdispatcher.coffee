@@ -30,16 +30,16 @@ validator = require "./../validator"
 
 class Dispatcher extends Actor
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
     @workersAlias = "#{@actor}#workers"
-    @addWorkers(props.workers)
-    @nbWorkers = props.workers.nb
+    @addWorkers(properties.workers)
+    @nbWorkers = properties.workers.nb
 
   addWorkers : (workerProps) ->
     dispatchingUrl = @genRandomListenPort()
-    @state.outboundAdapters.push adapters.outboundAdapter("lb_socket", { targetActorAid: @workersAlias, owner: @, url: dispatchingUrl })
-    #@state.inboundAdapters.push adapters.inboundAdapter("lb_socket", { owner: @, url: dispatchingUrl })
+    @outboundAdapters.push adapters.outboundAdapter("lb_socket", { targetActorAid: @workersAlias, owner: @, url: dispatchingUrl })
+    #@inboundAdapters.push adapters.inboundAdapter("lb_socket", { owner: @, url: dispatchingUrl })
     for i in [1..workerProps.nb]
       @log "debug", "Adding a new worker #{i}"
       @createChild workerProps.type, workerProps.method, actor: "worker#{i}@localhost", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }], #{type: "channel", url: "tcp://*:2998"} ]
@@ -68,5 +68,5 @@ class Dispatcher extends Actor
     @send msg
 
 exports.Dispatcher = Dispatcher
-exports.newActor = (props) ->
-  new Dispatcher(props)
+exports.newActor = (properties) ->
+  new Dispatcher(properties)

@@ -30,21 +30,23 @@ _ = require "underscore"
 validator = require "./../validator"
 dbPool = require("./../dbPool.coffee").getDbPool()
 hFilter = require "./../hFilter"
+codes = require "./../codes"
 
 class Channel extends Actor
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    @actor = validator.getBareJID(props.actor)
+    @actor = validator.getBareJID(properties.actor)
     @type = "channel"
     @subscribersAlias = "#{@actor}#subscribers"
-    @chdesc = props.chdesc
-    @priority = props.priority or 1
-    @location = props.location
-    @owner = props.owner
-    @subscribers = props.subscribers or []
-    @active = props.active
-    @headers = props.headers
+    @chdesc = properties.chdesc
+    @priority = properties.priority or 1
+    @location = properties.location
+    @owner = properties.owner
+    @subscribers = properties.subscribers or []
+    @active = properties.active
+    @headers = properties.headers
+    @availableCommand = ["hGetLastMessages", "hRelevantMessages", "hGetThread", "hGetThreads"]
 
   onMessageInternal: (hMessage, cb) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
@@ -107,15 +109,15 @@ class Channel extends Actor
       dbInstance.removeHChannel @actor
 
     # Stop children first
-    _.forEach @state.children, (childAid) =>
+    _.forEach @children, (childAid) =>
       @send @buildMessage(childAid, "hCommand", CMD_STOP, {persistent:false})
     # Stop adapters second
-    _.invoke @state.inboundAdapters, "stop"
-    _.invoke @state.outboundAdapters, "stop"
+    _.invoke @inboundAdapters, "stop"
+    _.invoke @outboundAdapters, "stop"
     @setStatus "stopped"
     @removeAllListeners()
 
 
 exports.Channel = Channel
-exports.newActor = (props) ->
-  new Channel(props)
+exports.newActor = (properties) ->
+  new Channel(properties)

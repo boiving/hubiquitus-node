@@ -130,8 +130,8 @@ describe "hRelevantMessages", ->
     cmd.actor = hActor.actor
     hActor.onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
-      hMessage.payload.should.have.property "status", status.INVALID_ATTR
-      hMessage.payload.should.have.property("result").and.match /actor/
+      hMessage.payload.should.have.property "status", status.NOT_AVAILABLE
+      hMessage.payload.should.have.property("result").and.match /Command/
       done()
 
 
@@ -177,5 +177,57 @@ describe "hRelevantMessages", ->
       hMessage.payload.should.have.property "status", status.OK
       hMessage.payload.result.length.should.be.eql 0
       done()
+
+  describe "#FilterMessage()", ->
+    setMsg = undefined
+
+    before ->
+      i = 0
+      while i < 5
+        publishMsg = config.makeHMessage activeChan, hActor.actor, "string", {}
+        publishMsg.timeout = 0
+        publishMsg.persistent = true
+        publishMsg.relevance = new Date(new Date().getTime() + 100000)
+        publishMsg.author = "u2@localhost"
+        hActor.send publishMsg
+        i++
+
+    beforeEach ->
+      setMsg = config.makeHMessage(hActor.actor, config.logins[0].jid, "hCommand", {})
+      setMsg.payload =
+        cmd: "hSetFilter"
+        params: {}
+
+    it "should return Ok with messages respect filter", (done) ->
+      setMsg.payload.params = in:
+        publisher: ["u1@localhost"]
+
+      hActor.onMessageInternal setMsg, ->
+
+      hActor.send cmd, (hMessage) ->
+        hMessage.should.have.property "type", "hResult"
+        hMessage.payload.should.have.property "status", status.OK
+        hMessage.payload.should.have.property('result').and.be.an.instanceof(Array)
+        hMessage.payload.result.length.should.be.equal(15);
+
+        done()
+
+
+    it "should return Ok with only filtered messages with right quantity", (done) ->
+      setMsg.payload.params = in:
+        author: ["u2@localhost"]
+
+      hActor.onMessageInternal setMsg, ->
+      hActor.send cmd, (hMessage) ->
+        hMessage.should.have.property "type", "hResult"
+        hMessage.payload.should.have.property "status", status.OK
+        hMessage.payload.should.have.property('result').and.be.an.instanceof(Array)
+        hMessage.payload.result.length.should.be.equal(5);
+
+        i = 0
+        while i < hMessage.payload.result.length
+          hMessage.payload.result[i].should.have.property "author", "u2@localhost"
+          i++
+        done()
 
 

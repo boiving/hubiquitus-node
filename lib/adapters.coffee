@@ -29,10 +29,10 @@ validator = require "./validator"
 
 class Adapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     @started = false
-    if props.owner
-    then @owner = props.owner
+    if properties.owner
+    then @owner = properties.owner
     else throw new Error("You must pass an actor as reference")
 
   start: ->
@@ -43,7 +43,7 @@ class Adapter
 
 class InboundAdapter extends Adapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
 
   genListenPort: ->
@@ -51,9 +51,9 @@ class InboundAdapter extends Adapter
 
 class SocketInboundAdapter extends InboundAdapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    if props.url then @url = props.url else @url = "tcp://127.0.0.1:#{@genListenPort}"
+    if properties.url then @url = properties.url else @url = "tcp://127.0.0.1:#{@genListenPort}"
     @type = "socket"
     @sock = zmq.socket "pull"
     @sock.identity = "SocketIA_of_#{@owner.actor}"
@@ -73,9 +73,9 @@ class SocketInboundAdapter extends InboundAdapter
 
 class LBSocketInboundAdapter extends InboundAdapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    if props.url then @url = props.url else @url = "tcp://127.0.0.1:#{@genListenPort}"
+    if properties.url then @url = properties.url else @url = "tcp://127.0.0.1:#{@genListenPort}"
     @type = "lb_socket"
     @sock = zmq.socket "pull"
     @sock.identity = "LBSocketIA_of_#{@owner.actor}"
@@ -94,11 +94,11 @@ class LBSocketInboundAdapter extends InboundAdapter
 
 class ChannelInboundAdapter extends InboundAdapter
 
-  constructor: (props) ->
-    props.targetActorAid = "#{props.owner.aid}#workers"
+  constructor: (properties) ->
+    properties.targetActorAid = "#{properties.owner.aid}#workers"
     super
-    if props.url
-    then @url = props.url
+    if properties.url
+    then @url = properties.url
     else throw new Error("You must provide a channel url")
     @type = "channel"
     @sock = zmq.socket "sub"
@@ -119,9 +119,9 @@ class ChannelInboundAdapter extends InboundAdapter
 
 class OutboundAdapter extends Adapter
 
-  constructor: (props) ->
-    if props.targetActorAid
-      @targetActorAid = props.targetActorAid
+  constructor: (properties) ->
+    if properties.targetActorAid
+      @targetActorAid = properties.targetActorAid
     else
       throw new Error "You must provide the AID of the targeted actor"
     super
@@ -134,10 +134,10 @@ class OutboundAdapter extends Adapter
 
 class LocalOutboundAdapter extends OutboundAdapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    if props.ref
-    then @ref = props.ref
+    if properties.ref
+    then @ref = properties.ref
     else throw new Error("You must explicitely pass an actor as reference to a LocalOutboundAdapter")
 
   start: ->
@@ -149,10 +149,10 @@ class LocalOutboundAdapter extends OutboundAdapter
 
 class ChildprocessOutboundAdapter extends OutboundAdapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    if props.ref
-    then @ref = props.ref
+    if properties.ref
+    then @ref = properties.ref
     else throw new Error("You must explicitely pass an actor child process as reference to a ChildOutboundAdapter")
 
   start: ->
@@ -169,10 +169,10 @@ class ChildprocessOutboundAdapter extends OutboundAdapter
 
 class SocketOutboundAdapter extends OutboundAdapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    if props.url
-    then @url = props.url
+    if properties.url
+    then @url = properties.url
     else throw new Error("You must explicitely pass a valid url to a SocketOutboundAdapter")
     @sock = zmq.socket "push"
     @sock.identity = "SocketOA_of_#{@owner.actor}_to_#{@targetActorAid}"
@@ -193,10 +193,10 @@ class SocketOutboundAdapter extends OutboundAdapter
 
 class LBSocketOutboundAdapter extends OutboundAdapter
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
-    if props.url
-    then @url = props.url
+    if properties.url
+    then @url = properties.url
     else throw new Error("You must explicitely pass a valid url to a LBSocketOutboundAdapter")
     @sock = zmq.socket "push"
     @sock.identity = "LBSocketOA_of_#{@owner.actor}_to_#{@targetActorAid}"
@@ -218,11 +218,11 @@ class LBSocketOutboundAdapter extends OutboundAdapter
 
 class ChannelOutboundAdapter extends OutboundAdapter
 
-  constructor: (props) ->
-    props.targetActorAid = "#{validator.getBareJID(props.owner.actor)}#subscribers"
+  constructor: (properties) ->
+    properties.targetActorAid = "#{validator.getBareJID(properties.owner.actor)}#subscribers"
     super
-    if props.url
-    then @url = props.url
+    if properties.url
+    then @url = properties.url
     else throw new Error("You must explicitely pass a valid url to a ChannelOutboundAdapter")
     @sock = zmq.socket "pub"
     @sock.identity = "ChannelOA_of_#{@owner.actor}"
@@ -240,30 +240,30 @@ class ChannelOutboundAdapter extends OutboundAdapter
     @start() unless @started
     @sock.send JSON.stringify(message)
 
-exports.inboundAdapter = (type, props) ->
+exports.inboundAdapter = (type, properties) ->
   switch type
     when "socket"
-      new SocketInboundAdapter(props)
+      new SocketInboundAdapter(properties)
     when "lb_socket"
-      new LBSocketInboundAdapter(props)
+      new LBSocketInboundAdapter(properties)
     when "channel"
-      new ChannelInboundAdapter(props)
+      new ChannelInboundAdapter(properties)
     else
       throw new Error "Incorrect type '#{type}'"
 
-exports.outboundAdapter = (type, props) ->
+exports.outboundAdapter = (type, properties) ->
 
   switch type
     when "inproc"
-      new LocalOutboundAdapter(props)
+      new LocalOutboundAdapter(properties)
     when "fork"
-      new ChildprocessOutboundAdapter(props)
+      new ChildprocessOutboundAdapter(properties)
     when "socket"
-      new SocketOutboundAdapter(props)
+      new SocketOutboundAdapter(properties)
     when "lb_socket"
-      new LBSocketOutboundAdapter(props)
+      new LBSocketOutboundAdapter(properties)
     when "channel"
-      new ChannelOutboundAdapter(props)
+      new ChannelOutboundAdapter(properties)
     else
       throw new Error "Incorrect type '#{type}'"
 

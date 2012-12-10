@@ -30,9 +30,9 @@ os = require "os"
 _ = require "underscore"
 opts = require "./options.coffee"
 
-createActor = (props) ->
-  actorModule = require "#{__dirname}/actor/#{props.type}"
-  actor = actorModule.newActor(props)
+createActor = (properties) ->
+  actorModule = require "#{__dirname}/actor/#{properties.type}"
+  actor = actorModule.newActor(properties)
 
 main = ->
 

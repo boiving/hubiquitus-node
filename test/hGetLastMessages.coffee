@@ -128,8 +128,8 @@ describe "hGetLastMessages", ->
       cmd.actor = hActor.actor
       hActor.onMessageInternal cmd, (hMessage) ->
         hMessage.should.have.property "ref", cmd.msgid
-        hMessage.payload.should.have.property "status", status.INVALID_ATTR
-        hMessage.payload.should.have.property('result').and.match(/actor/)
+        hMessage.payload.should.have.property "status", status.NOT_AVAILABLE
+        hMessage.payload.should.have.property('result').and.match(/Command/)
         done()
 
 
@@ -247,6 +247,87 @@ describe "hGetLastMessages", ->
         hMessage.payload.should.have.property('result').and.be.an.instanceof(Array)
         hMessage.payload.result.length.should.be.equal(length)
         done()
+
+    describe "#FilterMessage()", ->
+      setMsg = undefined
+
+      before ->
+        i = 0
+        while i < 5
+          count = 0
+          date = new Date(100000 + i * 100000)
+          DateTab.push date
+          publishMsg = config.makeHMessage existingCHID, hActor.actor, "string", {}
+          publishMsg.timeout = 0
+          publishMsg.persistent = true
+          publishMsg.published = DateTab[count]
+          publishMsg.author = "u2@localhost"
+          hActor.send publishMsg
+
+          count++
+          i++
+
+      beforeEach ->
+        setMsg = config.makeHMessage(hActor.actor, config.logins[0].jid, "hCommand", {})
+        setMsg.payload =
+          cmd: "hSetFilter"
+          params: {}
+
+      it "should return Ok with default messages of channel if not specified and message respect filter", (done) ->
+        delete cmd.payload.params.nbLastMsg
+
+        setMsg.payload.params = in:
+          publisher: ["u1@localhost"]
+
+        hActor.onMessageInternal setMsg, ->
+
+        hActor.send cmd, (hMessage) ->
+          hMessage.should.have.property "type", "hResult"
+          hMessage.payload.should.have.property "status", status.OK
+          hMessage.payload.should.have.property('result').and.be.an.instanceof(Array)
+          hMessage.payload.result.length.should.be.equal(10);
+
+          done()
+
+
+      it "should return Ok with only filtered messages with right quantity", (done) ->
+        cmd.payload.params.nbLastMsg = 3
+        setMsg.payload.params = in:
+          author: ["u2@localhost"]
+
+        hActor.onMessageInternal setMsg, ->
+        hActor.send cmd, (hMessage) ->
+          hMessage.should.have.property "type", "hResult"
+          hMessage.payload.should.have.property "status", status.OK
+          hMessage.payload.should.have.property('result').and.be.an.instanceof(Array)
+          hMessage.payload.result.length.should.be.equal(3);
+
+          i = 0
+          while i < hMessage.payload.result.length
+            hMessage.payload.result[i].should.have.property "author", "u2@localhost"
+            i++
+          done()
+
+
+      it "should return Ok with only filtered messages with less quantity if demanded does not exist.", (done) ->
+        cmd.payload.params.nbLastMsg = 1000
+        setMsg.payload.params = in:
+          author: ["u2@localhost"]
+
+        hActor.onMessageInternal setMsg, ->
+
+        hActor.send cmd, (hMessage) ->
+          hMessage.should.have.property "type", "hResult"
+          hMessage.payload.should.have.property "status", status.OK
+          hMessage.payload.should.have.property('result').and.be.an.instanceof(Array)
+          hMessage.payload.result.length.should.be.equal(5);
+
+          i = 0
+          while i < hMessage.payload.result.length
+            hMessage.payload.result[i].should.have.property "author", "u2@localhost"
+            i++
+          done()
+
 
 
 

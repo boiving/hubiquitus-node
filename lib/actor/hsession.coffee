@@ -32,19 +32,20 @@ validator = require "../validator"
 
 class Session extends Actor
 
-  constructor: (props) ->
+  constructor: (properties) ->
     super
     # Setting outbound adapters
     @type = 'session'
-    @trackInbox = props.trackInbox
+    @trackInbox = properties.trackInbox
     @hClient = undefined
+    @availableCommand = ["hSetFilter", "hCreateUpdateChannel"]
 
   touchTrackers: ->
-    _.forEach @state.trackers, (trackerProps) =>
+    _.forEach @trackers, (trackerProps) =>
       @log "debug", "touching tracker #{trackerProps.trackerId}"
-      if @state.status is "stopping"
+      if @status is "stopping"
         @trackInbox = []
-      msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:validator.getBareJID(@actor), peerStatus:@state.status, peerInbox:@trackInbox}, {persistent:false})
+      msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:validator.getBareJID(@actor), peerStatus:@status, peerInbox:@trackInbox}, {persistent:false})
       @send(msg)
 
   receive: (hMessage) ->
@@ -84,5 +85,5 @@ class Session extends Actor
     @emit "connect"
 
 exports.Session = Session
-exports.newActor = (props) ->
-  new Session(props)
+exports.newActor = (properties) ->
+  new Session(properties)
