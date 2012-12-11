@@ -29,7 +29,7 @@ describe "hGetThread", ->
   cmd = undefined
   hActor = undefined
   status = require("../lib/codes").hResultStatus
-  actorModule = require("../lib/actor/hactor")
+  actorModule = require("../lib/actor/hsession")
   activeChannel = "##{config.getUUID()}@localhost"
   inactiveChannel = "##{config.getUUID()}@localhost"
   notInPart = "##{config.getUUID()}@localhost"
@@ -39,7 +39,7 @@ describe "hGetThread", ->
   before () ->
     topology = {
       actor: config.logins[0].jid,
-      type: "hactor"
+      type: "hsession"
     }
     hActor = actorModule.newActor(topology)
 

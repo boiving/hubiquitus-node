@@ -29,12 +29,12 @@ describe "hEcho", ->
   echoCmd = undefined
   hActor = undefined
   status = require("../lib/codes").hResultStatus
-  actorModule = require("../lib/actor/hactor")
+  actorModule = require("../lib/actor/hsession")
 
   before () ->
     topology = {
       actor: config.logins[0].jid,
-      type: "hactor"
+      type: "hsession"
     }
     hActor = actorModule.newActor(topology)
 

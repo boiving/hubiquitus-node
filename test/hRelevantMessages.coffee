@@ -27,7 +27,7 @@ config = require("./_config")
 
 describe "hRelevantMessages", ->
   status = require("../lib/codes").hResultStatus
-  actorModule = require("../lib/actor/hactor")
+  actorModule = require("../lib/actor/hsession")
   cmd = undefined
   hActor = undefined
   nbMsgs = 10
@@ -39,7 +39,7 @@ describe "hRelevantMessages", ->
   before () ->
     topology = {
       actor: config.logins[0].jid,
-      type: "hactor"
+      type: "hsession"
     }
     hActor = actorModule.newActor(topology)
 

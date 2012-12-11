@@ -28,7 +28,7 @@ describe "hGetLastMessages", ->
   cmd = undefined
   hActor = undefined
   status = require("../lib/codes").hResultStatus
-  actorModule = require("../lib/actor/hactor")
+  actorModule = require("../lib/actor/hsession")
   existingCHID = "##{config.getUUID()}@localhost"
   chanWithHeader = "##{config.getUUID()}@localhost"
   inactiveChan = "##{config.getUUID()}@localhost"
@@ -39,7 +39,7 @@ describe "hGetLastMessages", ->
   before () ->
     topology = {
       actor: config.logins[0].jid,
-      type: "hactor"
+      type: "hsession"
     }
     hActor = actorModule.newActor(topology)
 

@@ -37,35 +37,28 @@ class Dispatcher extends Actor
     @nbWorkers = properties.workers.nb
 
   addWorkers : (workerProps) ->
-    dispatchingUrl = @genRandomListenPort()
+    dispatchingUrl = "tcp://127.0.0.1:#{Math.floor(Math.random() * 98)+3000}"
     @outboundAdapters.push adapters.outboundAdapter("lb_socket", { targetActorAid: @workersAlias, owner: @, url: dispatchingUrl })
     #@inboundAdapters.push adapters.inboundAdapter("lb_socket", { owner: @, url: dispatchingUrl })
     for i in [1..workerProps.nb]
       @log "debug", "Adding a new worker #{i}"
-      @createChild workerProps.type, workerProps.method, actor: "worker#{i}@localhost", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: @genRandomListenPort() }], #{type: "channel", url: "tcp://*:2998"} ]
+      @createChild workerProps.type, workerProps.method, actor: "worker#{i}@localhost", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: "tcp://127.0.0.1:#{Math.floor(Math.random() * 98)+3000}" }], #{type: "channel", url: "tcp://*:2998"} ]
 
-  onMessageInternal: (hMessage, cb) ->
-    @log "debug", "onMessage :"+JSON.stringify(hMessage)
-
-    try
-      validator.validateHMessage hMessage, (err, result) =>
-        if err
-          @log "debug", "hMessage not conform : ",result
-        else
-          if hMessage.type is "hCommand" and hMessage.actor is @actor
-            @runCommand(hMessage, cb)
-          else
-            @receive(hMessage)
-    catch error
-      @log "warn", "An error occured while processing incoming message: "+error
-
-  receive: (message) ->
-    @log "Dispatcher received a message to send to workers: #{JSON.stringify(message)}"
-    loadBalancing = Math.floor(Math.random() * @nbWorkers) + 1
-    sender = message.publisher
-    msg = @buildMessage("#{@actor}/worker#{loadBalancing}", message.type, message.payload)
-    msg.publisher = sender
-    @send msg
+  receive: (hMessage) ->
+    # If hCommand, execute it
+    if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
+      switch hMessage.payload.cmd
+        when "start"
+          @start()
+        when "stop"
+          @stop()
+    else
+      @log "Dispatcher received a hMessage to send to workers: #{JSON.stringify(hMessage)}"
+      loadBalancing = Math.floor(Math.random() * @nbWorkers) + 1
+      sender = hMessage.publisher
+      msg = @buildMessage("#{@actor}/worker#{loadBalancing}", hMessage.type, hMessage.payload)
+      msg.publisher = sender
+      @send msg
 
 exports.Dispatcher = Dispatcher
 exports.newActor = (properties) ->

@@ -49,16 +49,21 @@ class Gateway extends Actor
         if err
           @log "debug", "hMessage not conform : ",result
         else
-          if hMessage.type is "hCommand" and hMessage.actor is @actor
-            @runCommand(hMessage, cb)
-          else
             @receive(hMessage)
     catch error
       @log "warn", "An error occured while processing incoming message: "+error
 
   receive: (hMessage) ->
-    @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
-    @send hMessage
+    # If hCommand, execute it
+    if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
+      switch hMessage.payload.cmd
+        when "start"
+          @start()
+        when "stop"
+          @stop()
+    else
+      @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
+      @send hMessage
 
 
 exports.Gateway = Gateway

@@ -29,6 +29,9 @@ _ = require "underscore"
 statuses = require("../codes").statuses
 errors = require("../codes").errors
 validator = require "../validator"
+codes = require "../codes"
+options = require "../options"
+hFilter = require "../hFilter"
 
 class Session extends Actor
 
@@ -38,7 +41,6 @@ class Session extends Actor
     @type = 'session'
     @trackInbox = properties.trackInbox
     @hClient = undefined
-    @availableCommand = ["hSetFilter", "hCreateUpdateChannel"]
 
   touchTrackers: ->
     _.forEach @trackers, (trackerProps) =>
@@ -48,13 +50,91 @@ class Session extends Actor
       msg = @buildMessage(trackerProps.trackerId, "peer-info", {peerType:@type, peerId:validator.getBareJID(@actor), peerStatus:@status, peerInbox:@trackInbox}, {persistent:false})
       @send(msg)
 
-  receive: (hMessage) ->
+  checkFilter: (hMessage) ->
+    unless validator.getBareJID(hMessage.publisher) is validator.getBareJID(@actor)
+      return hFilter.checkFilterValidity(hMessage, @filter)
+    return {result: true, error: ""}
+
+  receive: (hMessage, cb) ->
+    # If hCommand, execute it
+    if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
+      switch hMessage.payload.cmd
+        when "start"
+          @start()
+        when "stop"
+          @stop()
+        when "hCreateUpdateChannel"
+          command = require("./../hcommands/hCreateUpdateChannel").Command
+          module = new command()
+          @runCommand(hMessage, module, cb)
+        when "hEcho"
+          command = require("./../hcommands/hEcho").Command
+          module = new command()
+          @runCommand(hMessage, module, cb)
+        when "hSetFilter"
+          result = @setFilter hMessage.payload.params
+          hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, result.status,result.result)
+          cb hMessageResult
+        else
+          hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.NOT_AVAILABLE, "Command not available for this actor")
+          cb hMessageResult
+    # If other type, publish
     if hMessage.actor is @actor
-      @hClient.socket.emit "hMessage", hMessage
+      if @hClient
+        @hClient.socket.emit "hMessage", hMessage
     else
       hMessage.publisher = @actor
       @log "debug", "Session received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
       @send hMessage
+
+  ###
+  Loads the hCommand module, sets the listener calls cb with the hResult.
+  @param hMessage - The received hMessage with a hCommand payload
+  @param cb - Callback receiving a hResult (optional)
+  ###
+  runCommand: (hMessage, module, cb) ->
+    self = this
+    timerObject = null #setTimeout timer variable
+    commandTimeout = null #Time in ms to wait to launch timeout
+    hMessageResult = undefined
+    hCommand = hMessage.payload
+
+    #check hCommand
+    if not hCommand or typeof hCommand isnt "object"
+      cb self.buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.INVALID_ATTR, "Invalid payload. Not an hCommand")
+      return
+    if not hCommand.cmd or typeof hCommand.cmd isnt "string"
+      cb self.buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.INVALID_ATTR, "Invalid command. Not a string")
+      return
+    if hCommand.params and typeof hCommand.params isnt "object"
+      cb self.buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.INVALID_ATTR, "Invalid command. Params is settled but not an object")
+      return
+    commandTimeout = module.timeout or options.commandController.timeout
+
+    onResult = (status, result) ->
+      #If callback is called after the timer ignore it
+      return  unless timerObject?
+      clearTimeout timerObject
+      hMessageResult = self.buildResult(hMessage.publisher, hMessage.msgid, status, result)
+      self.log "debug", "hCommand sent hMessage with hResult", hMessageResult
+      cb hMessageResult
+
+    #Add a timeout for the execution
+    timerObject = setTimeout(->
+      #Set it to null to test if cb is executed after timeout
+      timerObject = null
+      hMessageResult = self.buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.EXEC_TIMEOUT,"")
+      @log "debug", "hCommand sent hMessage with exceed timeout error", hMessageResult
+      cb hMessageResult
+    , commandTimeout)
+
+    #Run it!
+    try
+      module.exec hMessage, @, onResult
+    catch err
+      clearTimeout timerObject
+      @log "error", "Error in hCommand processing, hMessage = " + hMessage + " with error : " + err
+      cb(self.buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.TECH_ERROR, "error processing message : " + err))
 
   initListener: (client) =>
     delete client["hClient"]

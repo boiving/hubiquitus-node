@@ -27,14 +27,14 @@ config = require("./_config")
 
 describe "hCreateUpdateChannel", ->
   hActor = undefined
-  actorModule = require("../lib/actor/hactor")
+  actorModule = require("../lib/actor/hsession")
   status = require("../lib/codes").hResultStatus
   createCmd = undefined
 
   before () ->
     topology = {
     actor: config.logins[0].jid,
-    type: "hactor"
+    type: "hsession"
     }
     hActor = actorModule.newActor(topology)
 

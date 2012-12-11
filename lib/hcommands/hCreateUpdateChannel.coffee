@@ -119,11 +119,10 @@ hCreateUpdateChannel::exec = (hMessage, context, cb) ->
           else
             channel.actor = channel._id
             delete channel._id
-
             channel.outboundAdapters = [ { "type": "channel", "url": "tcp://127.0.0.1:#{Math.floor(Math.random() * 98)+4000}" } ]
             channel.inboundAdapters = [ { "type": "socket", "url": "tcp://127.0.0.1:#{Math.floor(Math.random() * 98)+4000}" } ]
             log.debug "Create Child : ",channel.actor
-            context.hActor.createChild "hchannel", "inproc", channel
+            context.createChild "hchannel", "inproc", channel
             cb status.OK
         else
           cb err, result

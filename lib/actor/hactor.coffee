@@ -35,9 +35,8 @@ _ = require "underscore"
 adapters = require "./../adapters"
 validator = require "./../validator"
 codes = require "./../codes.coffee"
-options = require "./../options"
-cmdControllerConst = require('./../hcommand_controller').Controller
 hFilter = require "./../hFilter"
+
 
 _.mixin toDict: (arr, key) ->
   throw new Error('_.toDict takes an Array') unless _.isArray arr
@@ -52,7 +51,7 @@ class Actor extends EventEmitter
   #Init logger
   logger.exitOnError = false
   logger.remove(logger.transports.Console)
-  logger.add(logger.transports.Console, {handleExceptions: true, level: "INFO"})
+  logger.add(logger.transports.Console, {handleExceptions: true, level: "debug"})
   logger.add(logger.transports.File, {handleExceptions: true, filename: "#{__dirname}/../../log/hActor.log", level: "debug"})
 
   # Possible running states of an actor
@@ -76,9 +75,10 @@ class Actor extends EventEmitter
       throw new Error "Invalid actor JID"
     @ressource = @actor.replace(/^.*\//, "")
     @type = "actor"
-    @filter = properties.filter or {}
+    @filter = {}
+    @setFilter(properties.filter)
     @msgToBeAnswered = {}
-    @availableCommand = ["hEcho", "hSetFilter", "hCreateUpdateChannel"]
+    @timerOutAdapter = {}
 
     # Initializing attributs
     @status = STATUS_STOPPED
@@ -86,10 +86,6 @@ class Actor extends EventEmitter
     @trackers = []
     @inboundAdapters = []
     @outboundAdapters = []
-
-    # Initializing hcommand_controller
-    @cmdController = new cmdControllerConst(options.commandController);
-    @cmdController.context.hActor = @;
 
     # Registering trackers
     if _.isArray(properties.trackers) and properties.trackers.length > 0
@@ -147,13 +143,11 @@ class Actor extends EventEmitter
           #Empty location and headers should not be sent/saved.
           validator.cleanEmptyAttrs hMessage, ["headers", "location"]
 
-          if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
-            @runCommand(hMessage, cb)
-          else if hMessage.type is "hStopAlert"
+          if hMessage.type is "hStopAlert"
             @removePeer(hMessage.payload.actoraid)
           else
             #Check if hMessage respect filter
-            checkValidity = hFilter.checkFilterValidity(hMessage, @filter)
+            checkValidity = @checkFilter(hMessage)
             if checkValidity.result is true
               @receive(hMessage, cb)
             else
@@ -163,35 +157,13 @@ class Actor extends EventEmitter
     catch error
       @log "warn", "An error occured while processing incoming message: "+error
 
-  runCommand: (hMessage, cb) ->
-    #case of a command
-    switch hMessage.payload.cmd
-      when "start"
-        @start()
-      when "stop"
-        @stop()
-      else
-        found = false
-        for command in @availableCommand
-          if hMessage.payload.cmd is command
-            found = true
-            @cmdController.execCommand hMessage, (result) =>
-              if result.result is "Module not found"
-                @receive hMessage, cb
-              else
-                if hMessage.timeout is 0
-                  @log "debug", "the sender doesn't want callback"
-                else
-                  cb result
-        if found is false
-          hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.NOT_AVAILABLE, "Command not available for this actor")
-          cb hMessageResult
-
-  receive: (hMessage, cb) ->
-    @log "info", "Message reveived: #{JSON.stringify(hMessage)}"
-    unless hMessage.timeout is 0
-      hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.OK, "")
-      cb hMessageResult
+  receive: (hMessage) ->
+    if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
+      switch hMessage.payload.cmd
+        when "start"
+          @start()
+        when "stop"
+          @stop()
 
   send: (hMessage, cb) ->
     unless _.isString(hMessage.actor)
@@ -200,12 +172,19 @@ class Actor extends EventEmitter
         return
       else
         throw new Error "'aid' parameter must be a string"
+
     if hMessage.type is "hCommand" and typeof hMessage.payload.params is "object"
       if hMessage.payload.cmd is "hGetLastMessages" or hMessage.payload.cmd is "hRelevantMessages" or hMessage.payload.cmd is "hGetThread" or hMessage.payload.cmd is "hGetThreads"
         hMessage.payload.params.filter = hMessage.payload.params.filter or @filter
     # first looking up for a cached adapter
     outboundAdapter = _.toDict( @outboundAdapters , "targetActorAid" )[hMessage.actor]
     if outboundAdapter
+      if @timerOutAdapter[outboundAdapter.targetActorAid]
+        clearTimeout(@timerOutAdapter[outboundAdapter.targetActorAid])
+        @timerOutAdapter[outboundAdapter.targetActorAid] = setTimeout(=>
+          @timerOutAdapter[outboundAdapter.targetActorAid] = null
+          @removePeer(outboundAdapter.targetActorAid)
+        , 90000)
       @sending(hMessage, cb, outboundAdapter)
     else
       if @trackers[0]
@@ -214,6 +193,12 @@ class Actor extends EventEmitter
           if hResult.payload.status is codes.hResultStatus.OK
             outboundAdapter = adapters.outboundAdapter(hResult.payload.result.type, { targetActorAid: hResult.payload.result.targetActorAid, owner: @, url: hResult.payload.result.url })
             @outboundAdapters.push outboundAdapter
+
+            @timerOutAdapter[outboundAdapter.targetActorAid] = setTimeout(->
+              @timerOutAdapter[outboundAdapter.targetActorAid] = null
+              @removePeer(outboundAdapter.targetActorAid)
+            , 90000)
+
             hMessage.actor = hResult.payload.result.targetActorAid
             @sending hMessage, cb, outboundAdapter
           else
@@ -308,9 +293,6 @@ class Actor extends EventEmitter
 
     properties.actor
 
-  genRandomListenPort: ->
-    "tcp://127.0.0.1:#{Math.floor(Math.random() * 98)+3000}"
-
   ###*
     Function that enrich a message with actor details and logs it to the console
     @message {object} the message to log
@@ -350,10 +332,12 @@ class Actor extends EventEmitter
     switch status
       when STATUS_STARTED
         @touchTrackers()
-        #interval = setInterval(@touchTrackers, 60000)
+        interval = setInterval(=>
+          @touchTrackers()
+        , 60000)
       when STATUS_STOPPING
         @touchTrackers()
-        #clearInterval(interval)
+        clearInterval(interval)
     # advertise
     @emit status
     # Log
@@ -382,11 +366,27 @@ class Actor extends EventEmitter
     @setStatus STATUS_STOPPED
     @removeAllListeners()
 
+  setFilter: (hCondition) ->
+    if not hCondition or (hCondition not instanceof Object)
+      return {status: codes.hResultStatus.INVALID_ATTR, result:"invalid filter"}
+
+    checkFormat = hFilter.checkFilterFormat(hCondition)
+
+    if checkFormat.result is true
+      @filter = hCondition
+      return {status: codes.hResultStatus.OK, result:""}
+    else
+      return {status: codes.hResultStatus.INVALID_ATTR, result: checkFormat.error}
+
+  checkFilter: (hMessage) ->
+    return hFilter.checkFilterValidity(hMessage, @filter)
+
   removePeer: (actor) ->
     @log "debug", "Removing peer #{actor}"
     index = 0
     _.forEach @outboundAdapters, (outbound) =>
       if outbound.targetActorAid is actor
+        outbound.stop()
         delete @outboundAdapters[index]
       index++
 

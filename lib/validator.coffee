@@ -68,7 +68,6 @@ exports.validateHChannel = (hChannel, cb) ->
     if typeof subscriber isnt "string"
       return cb(codes.INVALID_ATTR, "subscriber " + i + " is not a JID")
     if not exports.validateJID(subscriber) or exports.splitJID(subscriber)[2]
-      console.log "erreur ",subscriber
       return cb(codes.INVALID_ATTR, "subscriber " + i + " is not a JID")
   if typeof hChannel.active isnt "boolean"
     return cb(codes.INVALID_ATTR, "active is not a boolean")

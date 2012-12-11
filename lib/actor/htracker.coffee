@@ -39,42 +39,48 @@ class Tracker extends Actor
     #@on "started", -> @pingChannel(properties.broadcastUrl)
 
   receive: (message) ->
-    @log "debug", "Tracker received a message: #{JSON.stringify(message)}"
-    if message.type is "peer-info"
-      existPeer = false
-      _.forEach @peers, (peers) =>
-        if peers.peerFullId is message.publisher
-          existPeer = true
-          peers.peerStatus = message.payload.peerStatus
-          peers.peerInbox = message.payload.peerInbox
-          if peers.peerStatus is "stopping"
-            @stopAlert(message.publisher)
-      if existPeer isnt true
-        @peers.push {peerType:message.payload.peerType, peerFullId:message.publisher, peerId:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
-        outbox = @findOutbox(message.publisher)
-        if outbox
-          @outboundAdapters.push adapters.outboundAdapter(outbox.type, { targetActorAid: outbox.targetActorAid, owner: @, url: outbox.url })
+    # If hCommand, execute it
+    if message.type is "hCommand" and validator.getBareJID(message.actor) is validator.getBareJID(@actor)
+      switch message.payload.cmd
+        when "start"
+          @start()
+        when "stop"
+          @stop()
+    else
+      @log "debug", "Tracker received a message: #{JSON.stringify(message)}"
+      if message.type is "peer-info"
+        existPeer = false
+        _.forEach @peers, (peers) =>
+          if peers.peerFullId is message.publisher
+            existPeer = true
+            peers.peerStatus = message.payload.peerStatus
+            peers.peerInbox = message.payload.peerInbox
+            if peers.peerStatus is "stopping"
+              @stopAlert(message.publisher)
+        if existPeer isnt true
+          @peers.push {peerType:message.payload.peerType, peerFullId:message.publisher, peerId:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
+          outbox = @findOutbox(message.publisher)
+          if outbox
+            @outboundAdapters.push adapters.outboundAdapter(outbox.type, { targetActorAid: outbox.targetActorAid, owner: @, url: outbox.url })
 
-    else if message.type is "peer-search"
-      # TODO reflexion sur le lookup et implementation
-      outboundadapter = @findOutbox(message.payload.actor)
+      else if message.type is "peer-search"
+        # TODO reflexion sur le lookup et implementation
+        outboundadapter = @findOutbox(message.payload.actor)
 
-      if outboundadapter
-        status = codes.OK
-        result = outboundadapter
-        if @askPeer[message.payload.actor]
-          @askPeer[message.payload.actor].push (message.publisher)
+        if outboundadapter
+          status = codes.OK
+          result = outboundadapter
+          if @askPeer[message.payload.actor]
+            @askPeer[message.payload.actor].push (message.publisher)
+          else
+            @askPeer[message.payload.actor] = []
+            @askPeer[message.payload.actor].push (message.publisher)
         else
-          @askPeer[message.payload.actor] = []
-          @askPeer[message.payload.actor].push (message.publisher)
-      else
-        status = codes.INVALID_ATTR
-        result = "Actor not found"
+          status = codes.INVALID_ATTR
+          result = "Actor not found"
 
-      msg = @buildResult(message.publisher, message.msgid, status, result)
-      console.log "send result ",result
-      console.log "out ",@outboundAdapters
-      @send msg
+        msg = @buildResult(message.publisher, message.msgid, status, result)
+        @send msg
 
   initChildren: (children)->
     _.forEach children, (childProps) =>

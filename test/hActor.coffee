@@ -25,10 +25,11 @@
 should = require("should")
 describe "hActor", ->
   hActor = undefined
+  hActor2 = undefined
   config = require("./_config")
   hResultStatus = require("../lib/codes").hResultStatus
   cmd = {}
-  actorModule = require("../lib/actor/hactor")
+  actorModule = require("../lib/actor/hsession")
 
   describe "#FilterMessage()", ->
     cmd = undefined
@@ -37,9 +38,11 @@ describe "hActor", ->
     before () ->
       topology = {
         actor: config.logins[0].jid,
-        type: "hactor"
+        type: "hsession"
       }
       hActor = actorModule.newActor(topology)
+      hActor.createChild "hsession", "inproc", topology, (child) =>
+        hActor2 = child
 
     after () ->
       hActor.stop()
@@ -51,10 +54,10 @@ describe "hActor", ->
         cmd: "hSetFilter"
         params: {}
 
-      hMsg = config.makeHMessage(hActor.actor, config.logins[0].jid, "string", {})
+      hMsg = config.makeHMessage(hActor2.actor, config.logins[0].jid, "string", {})
 
     it "should return Ok if empty filter", (done) ->
-      hActor.onMessageInternal hMsg, (hMessage) ->
+      hActor2.onMessageInternal hMsg, (hMessage) ->
         hMessage.should.have.property "type", "hResult"
         hMessage.payload.should.have.property "status", hResultStatus.OK
         done()
@@ -66,9 +69,9 @@ describe "hActor", ->
           priority: 2
 
         hMsg.priority = 3
-        hActor.onMessageInternal cmd, ->
+        hActor2.onMessageInternal cmd, ->
 
-        hActor.onMessageInternal hMsg, (hMessage) ->
+        hActor.send hMsg, (hMessage) ->
           hMessage.should.have.property "type", "hResult"
           hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
           done()

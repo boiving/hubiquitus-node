@@ -28,12 +28,12 @@ describe "hSetFilter", ->
   config = require("./_config")
   hResultStatus = require("../lib/codes").hResultStatus
   cmd = {}
-  actorModule = require("../lib/actor/hactor")
+  actorModule = require("../lib/actor/hsession")
 
   before () ->
     topology = {
     actor: config.logins[0].jid,
-    type: "hactor"
+    type: "hsession"
     }
     hActor = actorModule.newActor(topology)
 
