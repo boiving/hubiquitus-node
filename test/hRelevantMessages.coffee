@@ -50,7 +50,7 @@ describe "hRelevantMessages", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel activeChan, [config.validJID], config.validJID, true
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
 
@@ -90,7 +90,7 @@ describe "hRelevantMessages", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel emptyChannel, [config.validJID], config.validJID, true
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -98,7 +98,7 @@ describe "hRelevantMessages", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel notInPart, ["other@localhost"], config.validJID, true
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -106,7 +106,7 @@ describe "hRelevantMessages", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel inactiveChan, [config.validJID], config.validJID, false
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -128,7 +128,7 @@ describe "hRelevantMessages", ->
 
   it "should return hResult error INVALID_ATTR with actor not a channel", (done) ->
     cmd.actor = hActor.actor
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", status.NOT_AVAILABLE
       hMessage.payload.should.have.property("result").and.match /Command/
@@ -202,7 +202,7 @@ describe "hRelevantMessages", ->
       setMsg.payload.params = in:
         publisher: ["u1@localhost"]
 
-      hActor.onMessageInternal setMsg, ->
+      hActor.h_onMessageInternal setMsg, ->
 
       hActor.send cmd, (hMessage) ->
         hMessage.should.have.property "type", "hResult"
@@ -217,7 +217,7 @@ describe "hRelevantMessages", ->
       setMsg.payload.params = in:
         author: ["u2@localhost"]
 
-      hActor.onMessageInternal setMsg, ->
+      hActor.h_onMessageInternal setMsg, ->
       hActor.send cmd, (hMessage) ->
         hMessage.should.have.property "type", "hResult"
         hMessage.payload.should.have.property "status", status.OK

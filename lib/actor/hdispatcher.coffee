@@ -44,7 +44,7 @@ class Dispatcher extends Actor
       @log "debug", "Adding a new worker #{i}"
       @createChild workerProps.type, workerProps.method, actor: "worker#{i}@localhost", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: "tcp://127.0.0.1:#{Math.floor(Math.random() * 98)+3000}" }], #{type: "channel", url: "tcp://*:2998"} ]
 
-  receive: (hMessage) ->
+  onMessage: (hMessage) ->
     # If hCommand, execute it
     if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
       switch hMessage.payload.cmd

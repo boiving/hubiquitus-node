@@ -55,7 +55,7 @@ class Session extends Actor
       return hFilter.checkFilterValidity(hMessage, @filter)
     return {result: true, error: ""}
 
-  receive: (hMessage, cb) ->
+  onMessage: (hMessage, cb) ->
     # If hCommand, execute it
     if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
       switch hMessage.payload.cmd
@@ -78,7 +78,6 @@ class Session extends Actor
         else
           hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.NOT_AVAILABLE, "Command not available for this actor")
           cb hMessageResult
-    # If other type, publish
     if hMessage.actor is @actor
       if @hClient
         @hClient.socket.emit "hMessage", hMessage

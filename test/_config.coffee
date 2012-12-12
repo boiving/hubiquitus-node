@@ -16,7 +16,6 @@ commandsTimeout = 5000
 exports.validators = undefined
 exports.codes = undefined
 exports.db = undefined
-exports.cmdController = undefined
 
 # Available vars
 exports.logins = undefined
@@ -43,7 +42,6 @@ should = require('should')
 codes = require('../lib/codes')
 
 validators = require('../lib/validator')
-cmdController = require('../lib/hcommand_controller').Controller
 winston = require('winston')
 
 db = require('../lib/dbPool').getDbPool().getDb("admin");
@@ -51,7 +49,6 @@ db = require('../lib/dbPool').getDbPool().getDb("admin");
 exports.validators = validators
 exports.db = db
 exports.codes = codes
-exports.cmdController = cmdController
 
 validJID = 'u1@localhost'
 

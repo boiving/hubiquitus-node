@@ -35,10 +35,9 @@ class Tracker extends Actor
     super
     #TODO check properties
     @peers = []
-    @askPeer = {}
     #@on "started", -> @pingChannel(properties.broadcastUrl)
 
-  receive: (message) ->
+  onMessage: (message) ->
     # If hCommand, execute it
     if message.type is "hCommand" and validator.getBareJID(message.actor) is validator.getBareJID(@actor)
       switch message.payload.cmd
@@ -55,8 +54,7 @@ class Tracker extends Actor
             existPeer = true
             peers.peerStatus = message.payload.peerStatus
             peers.peerInbox = message.payload.peerInbox
-            if peers.peerStatus is "stopping"
-              @stopAlert(message.publisher)
+
         if existPeer isnt true
           @peers.push {peerType:message.payload.peerType, peerFullId:message.publisher, peerId:message.payload.peerId, peerStatus:message.payload.peerStatus, peerInbox:message.payload.peerInbox}
           outbox = @findOutbox(message.publisher)
@@ -70,11 +68,6 @@ class Tracker extends Actor
         if outboundadapter
           status = codes.OK
           result = outboundadapter
-          if @askPeer[message.payload.actor]
-            @askPeer[message.payload.actor].push (message.publisher)
-          else
-            @askPeer[message.payload.actor] = []
-            @askPeer[message.payload.actor].push (message.publisher)
         else
           status = codes.INVALID_ATTR
           result = "Actor not found"
@@ -118,15 +111,9 @@ class Tracker extends Actor
         if lb_peers.peerStatus is "started"
           _.forEach lb_peers.peerInbox, (inbox) =>
             if inbox.type is "socket"
-              outboundadapter = {type: inbox.type, targetActorAid: lb_peers.peerFullId, url: inbox.url}
+              outboundadapter = {type: inbox.type, targetActorAid: lb_peers.peerId, url: inbox.url}
 
     outboundadapter
-
-  stopAlert: (actor) ->
-    if @askPeer[actor]
-      for asker in @askPeer[actor]
-        msg = @buildMessage(asker, "hStopAlert", {actoraid:actor})
-        @send msg
 
 exports.Tracker = Tracker
 exports.newActor = (properties) ->

@@ -41,19 +41,7 @@ class Gateway extends Actor
       adapterProps.owner = @
       socketIO.socketIO(adapterProps)
 
-  onMessageInternal: (hMessage, cb) ->
-    @log "debug", "onMessage :"+JSON.stringify(hMessage)
-
-    try
-      validator.validateHMessage hMessage, (err, result) =>
-        if err
-          @log "debug", "hMessage not conform : ",result
-        else
-            @receive(hMessage)
-    catch error
-      @log "warn", "An error occured while processing incoming message: "+error
-
-  receive: (hMessage) ->
+  onMessage: (hMessage) ->
     # If hCommand, execute it
     if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
       switch hMessage.payload.cmd

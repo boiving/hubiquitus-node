@@ -50,7 +50,7 @@ describe "hGetLastMessages", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel existingCHID, [config.validJID, config.logins[2].jid], config.validJID, true
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -58,7 +58,7 @@ describe "hGetLastMessages", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel inactiveChan, [config.validJID, config.logins[2].jid], config.validJID, false
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -69,7 +69,7 @@ describe "hGetLastMessages", ->
     createCmd.payload.params.headers = {}
     createCmd.payload.params.headers =
       MAX_MSG_RETRIEVAL: "" + maxMsgRetrieval
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
 
@@ -89,7 +89,7 @@ describe "hGetLastMessages", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel subsChan, [config.logins[2].jid], config.validJID, true
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -126,7 +126,7 @@ describe "hGetLastMessages", ->
 
     it "should return hResult error INVALID_ATTR with actor not a channel", (done) ->
       cmd.actor = hActor.actor
-      hActor.onMessageInternal cmd, (hMessage) ->
+      hActor.h_onMessageInternal cmd, (hMessage) ->
         hMessage.should.have.property "ref", cmd.msgid
         hMessage.payload.should.have.property "status", status.NOT_AVAILABLE
         hMessage.payload.should.have.property('result').and.match(/Command/)
@@ -279,7 +279,7 @@ describe "hGetLastMessages", ->
         setMsg.payload.params = in:
           publisher: ["u1@localhost"]
 
-        hActor.onMessageInternal setMsg, ->
+        hActor.h_onMessageInternal setMsg, ->
 
         hActor.send cmd, (hMessage) ->
           hMessage.should.have.property "type", "hResult"
@@ -295,7 +295,7 @@ describe "hGetLastMessages", ->
         setMsg.payload.params = in:
           author: ["u2@localhost"]
 
-        hActor.onMessageInternal setMsg, ->
+        hActor.h_onMessageInternal setMsg, ->
         hActor.send cmd, (hMessage) ->
           hMessage.should.have.property "type", "hResult"
           hMessage.payload.should.have.property "status", status.OK
@@ -314,7 +314,7 @@ describe "hGetLastMessages", ->
         setMsg.payload.params = in:
           author: ["u2@localhost"]
 
-        hActor.onMessageInternal setMsg, ->
+        hActor.h_onMessageInternal setMsg, ->
 
         hActor.send cmd, (hMessage) ->
           hMessage.should.have.property "type", "hResult"

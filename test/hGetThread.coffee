@@ -50,7 +50,7 @@ describe "hGetThread", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel activeChannel, [config.validJID], config.validJID, true
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -58,7 +58,7 @@ describe "hGetThread", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel inactiveChannel, [config.validJID], config.validJID, false
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -66,7 +66,7 @@ describe "hGetThread", ->
   before (done) ->
     @timeout 5000
     createCmd = config.createChannel notInPart, [config.logins[2].jid], config.validJID, false
-    hActor.onMessageInternal createCmd,  (hMessage) ->
+    hActor.h_onMessageInternal createCmd,  (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -147,7 +147,7 @@ describe "hGetThread", ->
 
   it "should return hResult error INVALID_ATTR with actor not a channel", (done) ->
     cmd.actor = hActor.actor
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", status.NOT_AVAILABLE
       hMessage.payload.should.have.property("result").and.match /Command/
@@ -276,7 +276,7 @@ describe "hGetThread", ->
           eq:
             type: "a type"
 
-      hActor.onMessageInternal filterCmd, (hMessage) ->
+      hActor.h_onMessageInternal filterCmd, (hMessage) ->
         hMessage.payload.should.have.property "status", status.OK
         done()
 

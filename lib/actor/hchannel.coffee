@@ -47,7 +47,7 @@ class Channel extends Actor
     @active = properties.active
     @headers = properties.headers
 
-  receive: (hMessage, cb) ->
+  onMessage: (hMessage, cb) ->
     # If hCommand, execute it
     if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
       switch hMessage.payload.cmd
@@ -154,19 +154,11 @@ class Channel extends Actor
   Function that stops the actor, including its children and adapters
   ###
   stop: ->
-    @setStatus "stopping"
     #Remove channel from database
     dbPool.getDb "admin", (dbInstance) =>
       dbInstance.removeHChannel @actor
 
-    # Stop children first
-    _.forEach @children, (childAid) =>
-      @send @buildMessage(childAid, "hCommand", CMD_STOP, {persistent:false})
-    # Stop adapters second
-    _.invoke @inboundAdapters, "stop"
-    _.invoke @outboundAdapters, "stop"
-    @setStatus "stopped"
-    @removeAllListeners()
+    super
 
 
 exports.Channel = Channel

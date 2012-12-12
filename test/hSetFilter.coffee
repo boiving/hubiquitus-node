@@ -48,7 +48,7 @@ describe "hSetFilter", ->
       params: {}
 
   it "should return hResult OK if params filter is empty", (done) ->
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.OK
       done()
@@ -56,7 +56,7 @@ describe "hSetFilter", ->
 
   it "should return hResult INVALID_ATTR if params filter is not an object", (done) ->
     cmd.payload.params = "a string"
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       done()
@@ -66,7 +66,7 @@ describe "hSetFilter", ->
     cmd.payload.params = bad:
       attribut: true
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "A filter must start with a valid operand"
@@ -84,7 +84,7 @@ describe "hSetFilter", ->
       in: "string"
       nin: "string"
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "The attribute of an operand eq must be an object"
@@ -102,7 +102,7 @@ describe "hSetFilter", ->
       nor:
         attribut: false
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "The attribute must be an array with at least 2 elements"
@@ -115,7 +115,7 @@ describe "hSetFilter", ->
       or: [attribut: false]
       nor: [attribut: false]
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "The attribute must be an array with at least 2 elements"
@@ -124,7 +124,7 @@ describe "hSetFilter", ->
 
   it "should return hResult INVALID_ATTR if filter with operand not is an valid object", (done) ->
     cmd.payload.params = not: [attribut: false]
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "The attribute of an operand \"not\" must be an object"
@@ -136,7 +136,7 @@ describe "hSetFilter", ->
       bad:
         attribut: false
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "A filter must start with a valid operand"
@@ -145,7 +145,7 @@ describe "hSetFilter", ->
 
   it "should return hResult INVALID_ATTR if filter with operand relevant is not a boolean", (done) ->
     cmd.payload.params = relevant: "string"
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "The attribute of an operand \"relevant\" must be a boolean"
@@ -157,7 +157,7 @@ describe "hSetFilter", ->
       lat: 12
       lng: 24
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "Attributes of an operand \"geo\" must be numbers"
@@ -169,7 +169,7 @@ describe "hSetFilter", ->
       lng: 24
       radius: 10000
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "Attributes of an operand \"geo\" must be numbers"
@@ -181,7 +181,7 @@ describe "hSetFilter", ->
       lat: 12
       radius: 10000
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "Attributes of an operand \"geo\" must be numbers"
@@ -194,7 +194,7 @@ describe "hSetFilter", ->
       lng: 24
       radius: 10000
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "Attributes of an operand \"geo\" must be numbers"
@@ -207,7 +207,7 @@ describe "hSetFilter", ->
       lng: "string"
       radius: 10000
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "Attributes of an operand \"geo\" must be numbers"
@@ -220,7 +220,7 @@ describe "hSetFilter", ->
       lng: 24
       radius: "string"
 
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "ref", cmd.msgid
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       hMessage.payload.should.have.property "result", "Attributes of an operand \"geo\" must be numbers"
@@ -229,7 +229,7 @@ describe "hSetFilter", ->
 
   it "should return INVALID_ATTR if attribute boolean is not a boolean", (done) ->
     cmd.payload.params = boolean: "string"
-    hActor.onMessageInternal cmd, (hMessage) ->
+    hActor.h_onMessageInternal cmd, (hMessage) ->
       hMessage.should.have.property "type", "hResult"
       hMessage.payload.should.have.property "status", hResultStatus.INVALID_ATTR
       done()

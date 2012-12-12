@@ -118,18 +118,15 @@ class Actor extends EventEmitter
         delete @msgToBeAnswered[ref]
         cb hMessage
       else
-        @onMessage hMessage
+        @h_onMessageInternal hMessage, (hMessageResult) =>
+          @send hMessageResult
 
 
     # Adding children once started
     @on "started", ->
       @initChildren(properties.children)
 
-  onMessage: (hMessage) ->
-    @onMessageInternal hMessage, (hMessageResult) =>
-      @send hMessageResult
-
-  onMessageInternal: (hMessage, cb) ->
+  h_onMessageInternal: (hMessage, cb) ->
     @log "debug", "onMessage :"+JSON.stringify(hMessage)
     try
       validator.validateHMessage hMessage, (err, result) =>
@@ -143,27 +140,29 @@ class Actor extends EventEmitter
           #Empty location and headers should not be sent/saved.
           validator.cleanEmptyAttrs hMessage, ["headers", "location"]
 
-          if hMessage.type is "hStopAlert"
-            @removePeer(hMessage.payload.actoraid)
+          #Check if hMessage respect filter
+          checkValidity = @checkFilter(hMessage)
+          if checkValidity.result is true
+            @onMessage hMessage, cb
           else
-            #Check if hMessage respect filter
-            checkValidity = @checkFilter(hMessage)
-            if checkValidity.result is true
-              @receive(hMessage, cb)
-            else
-              hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.INVALID_ATTR, checkValidity.error)
-              cb hMessageResult
+            hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.INVALID_ATTR, checkValidity.error)
+            cb hMessageResult
 
     catch error
       @log "warn", "An error occured while processing incoming message: "+error
 
-  receive: (hMessage) ->
+  onMessage: (hMessage, cb) ->
+    @log "info", "Message reveived: #{JSON.stringify(hMessage)}"
     if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
       switch hMessage.payload.cmd
         when "start"
           @start()
         when "stop"
           @stop()
+    else
+      if hMessage.timeout > 0
+        hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.OK, "")
+        cb hMessageResult
 
   send: (hMessage, cb) ->
     unless _.isString(hMessage.actor)

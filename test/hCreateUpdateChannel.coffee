@@ -48,7 +48,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR without params", (done) ->
     createCmd.payload.params = null
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a "string"
@@ -57,7 +57,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR with params not an object", (done) ->
     createCmd.payload.params = "string"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a "string"
@@ -67,7 +67,7 @@ describe "hCreateUpdateChannel", ->
   it "should return hResult error MISSING_ATTR without actor", (done) ->
     delete createCmd.payload.params.actor
 
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.MISSING_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /actor/i
@@ -77,7 +77,7 @@ describe "hCreateUpdateChannel", ->
   it "should return hResult error INVALID_ATTR with empty string as actor", (done) ->
     @timeout 5000
     createCmd.payload.params.actor = ""
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /actor/i
@@ -86,7 +86,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR with type is not 'channel'", (done) ->
     createCmd.payload.params.type = "bad_type"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a "string"
@@ -95,7 +95,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error OK with actor with a different domain", (done) ->
     createCmd.payload.params.actor = "#channel@another.domain"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -103,7 +103,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error NOT_AUTHORIZED with using hAdminChannel as actor", (done) ->
     createCmd.payload.params.actor = "#hAdminChannel@localhost"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.NOT_AUTHORIZED
       hMessage.payload.should.have.property("result").and.be.a "string"
@@ -112,7 +112,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if actor is not string castable", (done) ->
     createCmd.payload.params.actor = []
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /actor/i
@@ -121,7 +121,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if priority is not a number", (done) ->
     createCmd.payload.params.priority = "not a number"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /priority/i
@@ -130,7 +130,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if priority >5", (done) ->
     createCmd.payload.params.priority = 6
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /priority/i
@@ -139,7 +139,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if priority <0", (done) ->
     createCmd.payload.params.priority = -1
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /priority/i
@@ -148,7 +148,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR with invalid location format", (done) ->
     createCmd.payload.params.location = "something"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       done()
@@ -157,7 +157,7 @@ describe "hCreateUpdateChannel", ->
   it "should return hResult error MISSING_ATTR if owner is missing", (done) ->
     delete createCmd.payload.params.owner
 
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.MISSING_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /owner/i
@@ -166,7 +166,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if owner is an empty string", (done) ->
     createCmd.payload.params.owner = ""
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /owner/i
@@ -175,7 +175,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if owner JID is not bare", (done) ->
     createCmd.payload.params.owner = createCmd.publisher + "/resource"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /owner/i
@@ -185,7 +185,7 @@ describe "hCreateUpdateChannel", ->
   it "should return hResult error MISSING_ATTR if subscribers is missing", (done) ->
     delete createCmd.payload.params.subscribers
 
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.MISSING_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /subscriber/i
@@ -194,7 +194,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if subscribers is not an array", (done) ->
     createCmd.payload.params.subscribers = ""
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /subscriber/i
@@ -203,7 +203,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if subscribers has an element that is not a string", (done) ->
     createCmd.payload.params.subscribers = [not: "a string"]
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /subscriber/i
@@ -212,7 +212,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if subscribers has an element that is not a JID", (done) ->
     createCmd.payload.params.subscribers = ["a@b", "this is not a JID"]
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /subscriber/i
@@ -221,7 +221,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if subscribers has an element that is not a bare JID", (done) ->
     createCmd.payload.params.subscribers = ["a@b", "a@b/resource"]
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /subscriber/i
@@ -231,7 +231,7 @@ describe "hCreateUpdateChannel", ->
   it "should return hResult error MISSING_ATTR if active is missing", (done) ->
     delete createCmd.payload.params.active
 
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.MISSING_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /active/i
@@ -240,7 +240,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if active is not a boolean", (done) ->
     createCmd.payload.params.active = "this is a string"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /active/i
@@ -249,7 +249,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error INVALID_ATTR if headers is not an object", (done) ->
     createCmd.payload.params.headers = "something"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.INVALID_ATTR
       hMessage.payload.should.have.property("result").and.be.a("string").and.match /header/i
@@ -258,7 +258,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult error NOT_AUTHORIZED if owner different than sender", (done) ->
     createCmd.payload.params.owner = "another@another.jid"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.NOT_AUTHORIZED
       done()
@@ -268,7 +268,7 @@ describe "hCreateUpdateChannel", ->
     @timeout 5000
     createCmd.publisher = config.validJID + "/resource"
     createCmd.payload.params.owner = config.validJID
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -277,7 +277,7 @@ describe "hCreateUpdateChannel", ->
   it "should return hResult OK if actor is fully compliant with #chid@domain", (done) ->
     @timeout 5000
     createCmd.payload.params.actor = "#actor@localhost"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -285,7 +285,7 @@ describe "hCreateUpdateChannel", ->
 
   it "should return hResult OK without any optional attributes", (done) ->
     @timeout 5000
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -307,7 +307,7 @@ describe "hCreateUpdateChannel", ->
       lat: ""
 
     createCmd.payload.params.headers = key: "value"
-    hActor.onMessageInternal createCmd, (hMessage) ->
+    hActor.h_onMessageInternal createCmd, (hMessage) ->
       hMessage.should.have.property "ref", createCmd.msgid
       hMessage.payload.should.have.property "status", status.OK
       done()
@@ -320,7 +320,7 @@ describe "hCreateUpdateChannel", ->
     before (done) ->
       @timeout 5000
       createCmd = config.createChannel existingCHID, [config.validJID], config.validJID, true
-      hActor.onMessageInternal createCmd,  (hMessage) ->
+      hActor.h_onMessageInternal createCmd,  (hMessage) ->
         hMessage.should.have.property "ref", createCmd.msgid
         hMessage.payload.should.have.property "status", status.OK
         done()
@@ -329,7 +329,7 @@ describe "hCreateUpdateChannel", ->
       @timeout 5000
       createCmd.payload.params.actor = existingCHID
       createCmd.payload.params.subscribers = ["u2@another"]
-      hActor.onMessageInternal createCmd, (hMessage) ->
+      hActor.h_onMessageInternal createCmd, (hMessage) ->
         hMessage.should.have.property "ref", createCmd.msgid
         hMessage.payload.should.have.property "status", status.OK
 
@@ -341,7 +341,7 @@ describe "hCreateUpdateChannel", ->
       @timeout 5000
       createCmd.payload.params.actor = existingCHID
       createCmd.payload.params.subscribers = [config.validJID, "u2@another2"]
-      hActor.onMessageInternal createCmd, (hMessage) ->
+      hActor.h_onMessageInternal createCmd, (hMessage) ->
         hMessage.should.have.property "ref", createCmd.msgid
         hMessage.payload.should.have.property "status", status.OK
         done()
@@ -351,7 +351,7 @@ describe "hCreateUpdateChannel", ->
       @timeout 5000
       createCmd.payload.params.actor = existingCHID
       createCmd.payload.params.subscribers = ["u2@another2"]
-      hActor.onMessageInternal createCmd, (hMessage) ->
+      hActor.h_onMessageInternal createCmd, (hMessage) ->
         hMessage.should.have.property "ref", createCmd.msgid
         hMessage.payload.should.have.property "status", status.OK
         done()
@@ -361,7 +361,7 @@ describe "hCreateUpdateChannel", ->
       @timeout 5000
       createCmd.payload.params.owner = "a@jid.different"
       createCmd.payload.params.actor = existingCHID
-      hActor.onMessageInternal createCmd, (hMessage) ->
+      hActor.h_onMessageInternal createCmd, (hMessage) ->
         hMessage.should.have.property "ref", createCmd.msgid
         hMessage.payload.should.have.property "status", status.NOT_AUTHORIZED
         done()
