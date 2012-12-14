@@ -105,7 +105,7 @@ class SocketIO_Connector
       client.socket.disconnect()  if client.socket
       delete clients[client.id]
 
-    msg = @owner.buildMessage(client.child, "hCommand", { cmd: "stop" })
+    msg = @owner.buildMessage(client.child, "hSignal", { cmd: "stop" })
     @owner.send msg
 
 

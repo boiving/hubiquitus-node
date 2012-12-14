@@ -45,20 +45,12 @@ class Dispatcher extends Actor
       @createChild workerProps.type, workerProps.method, actor: "worker#{i}@localhost", inboundAdapters: [ { type: "lb_socket", url: dispatchingUrl }, { type: "socket", url: "tcp://127.0.0.1:#{Math.floor(Math.random() * 98)+3000}" }], #{type: "channel", url: "tcp://*:2998"} ]
 
   onMessage: (hMessage) ->
-    # If hCommand, execute it
-    if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
-      switch hMessage.payload.cmd
-        when "start"
-          @start()
-        when "stop"
-          @stop()
-    else
-      @log "Dispatcher received a hMessage to send to workers: #{JSON.stringify(hMessage)}"
-      loadBalancing = Math.floor(Math.random() * @nbWorkers) + 1
-      sender = hMessage.publisher
-      msg = @buildMessage("#{@actor}/worker#{loadBalancing}", hMessage.type, hMessage.payload)
-      msg.publisher = sender
-      @send msg
+    @log "Dispatcher received a hMessage to send to workers: #{JSON.stringify(hMessage)}"
+    loadBalancing = Math.floor(Math.random() * @nbWorkers) + 1
+    sender = hMessage.publisher
+    msg = @buildMessage("#{@actor}/worker#{loadBalancing}", hMessage.type, hMessage.payload)
+    msg.publisher = sender
+    @send msg
 
 exports.Dispatcher = Dispatcher
 exports.newActor = (properties) ->

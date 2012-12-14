@@ -39,22 +39,19 @@ class Channel extends Actor
     @actor = validator.getBareJID(properties.actor)
     @type = "channel"
     @subscribersAlias = "#{@actor}#subscribers"
-    @chdesc = properties.chdesc
-    @priority = properties.priority or 1
-    @location = properties.location
-    @owner = properties.owner
-    @subscribers = properties.subscribers or []
-    @active = properties.active
-    @headers = properties.headers
+    @properties =
+      chdesc : properties.chdesc
+      priority : properties.priority or 1
+      location : properties.location
+      owner : properties.owner
+      subscribers : properties.subscribers or []
+      active : properties.active
+      headers : properties.headers
 
   onMessage: (hMessage, cb) ->
     # If hCommand, execute it
     if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
       switch hMessage.payload.cmd
-        when "start"
-          @start()
-        when "stop"
-          @stop()
         when "hGetLastMessages"
           command = require("./../hcommands/hGetLastMessages").Command
           module = new command()
@@ -71,6 +68,10 @@ class Channel extends Actor
         #  command = require("./../hcommands/hGetThreads").Command
         #  module = new command()
         #  @runCommand(hMessage, module, cb)
+        when "hSubscribe"
+          command = require("./../hcommands/hSubscribe").Command
+          module = new command()
+          @runCommand(hMessage, module, cb)
         when "hSetFilter"
           @setFilter hMessage.payload.params, cb
         else
@@ -153,12 +154,11 @@ class Channel extends Actor
   ###*
   Function that stops the actor, including its children and adapters
   ###
-  stop: ->
+  postStop: ->
     #Remove channel from database
     dbPool.getDb "admin", (dbInstance) =>
       dbInstance.removeHChannel @actor
 
-    super
 
 
 exports.Channel = Channel

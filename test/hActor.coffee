@@ -42,7 +42,7 @@ describe "hActor", ->
       hActor = actorModule.newActor(topology)
 
     after () ->
-      hActor.stop()
+      hActor.h_tearDown()
       hActor = null
 
     beforeEach ->
@@ -892,7 +892,7 @@ describe "hActor", ->
     describe "#relevantFilter()", ->
       it "should return INVALID_ATTR if hMessage don't respect true \"relevant\" filter", (done) ->
         filter = relevant: true
-        hMsg.relevance = new Date(79, 5, 24, 11, 33, 0)
+        hMsg.relevance = new Date(79, 5, 24, 11, 33, 0).getTime()
         hActor.setFilter filter
 
         hActor.h_onMessageInternal hMsg, (hMessage) ->
@@ -902,7 +902,7 @@ describe "hActor", ->
 
       it "should return INVALID_ATTR if hMessage don't respect false \"relevant\" filter", (done) ->
         filter = relevant: false
-        hMsg.relevance = new Date(2024, 5, 24, 11, 33, 0)
+        hMsg.relevance = new Date(2024, 5, 24, 11, 33, 0).getTime()
         hActor.setFilter filter
 
         hActor.h_onMessageInternal hMsg, (hMessage) ->
@@ -931,7 +931,7 @@ describe "hActor", ->
 
       it "should return OK if hMessage respect \"relevance\" filter ", (done) ->
         filter = relevant: true
-        hMsg.relevance = new Date(2024, 5, 24, 11, 33, 0)
+        hMsg.relevance = new Date(2024, 5, 24, 11, 33, 0).getTime()
         hActor.setFilter filter
 
         hActor.h_onMessageInternal hMsg, (hMessage) ->
@@ -941,7 +941,7 @@ describe "hActor", ->
 
       it "should return OK if hMessage respect false \"relevance\" filter ", (done) ->
         filter = relevant: false
-        hMsg.relevance = new Date(75, 5, 24, 11, 33, 0)
+        hMsg.relevance = new Date(75, 5, 24, 11, 33, 0).getTime()
         hActor.setFilter filter
 
         hActor.h_onMessageInternal hMsg, (hMessage) ->

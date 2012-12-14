@@ -39,7 +39,7 @@ describe "hEcho", ->
     hActor = actorModule.newActor(topology)
 
   after () ->
-    hActor.stop()
+    hActor.h_tearDown()
     hActor = null
 
   beforeEach (done) ->

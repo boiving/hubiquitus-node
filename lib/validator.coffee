@@ -98,7 +98,7 @@ exports.validateHMessage = (hMessage, cb) ->
     if hMessage.priority > 5 or hMessage.priority < 0
       return cb(codes.INVALID_ATTR, "hMessage priority is not a valid constant")
   if hMessage.relevance
-    hMessage.relevance = new Date(hMessage.relevance) #Sent as a string, convert back to date
+    hMessage.relevance = new Date(hMessage.relevance).getTime() #Sent as a string, convert back to date
     if hMessage.relevance is "Invalid Date"
       return cb(codes.INVALID_ATTR, "hMessage relevance is specified and is not a valid date object")
   if hMessage.persistent and typeof hMessage.persistent isnt "boolean"
@@ -110,7 +110,7 @@ exports.validateHMessage = (hMessage, cb) ->
   unless hMessage.publisher
     return cb(codes.MISSING_ATTR, "hMessage missing publisher")
   if hMessage.published
-    hMessage.published = new Date(hMessage.published) #Sent as a string, convert back to date
+    hMessage.published = new Date(hMessage.published).getTime() #Sent as a string, convert back to date
     if hMessage.published is "Invalid Date"
       return cb(codes.INVALID_ATTR, "hMessage published is specified and is not a valid date object")
   if typeof hMessage.headers isnt "undefined" and (hMessage.headers not instanceof Object)

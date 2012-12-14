@@ -92,8 +92,8 @@ exports.makeHMessage = (actor, publisher, type, payload) ->
     type: type
     priority: 0
     publisher: publisher
-    published: new Date()
-    sent: new Date()
+    published: new Date().getTime()
+    sent: new Date().getTime()
     timeout: 30000
     payload: payload
 

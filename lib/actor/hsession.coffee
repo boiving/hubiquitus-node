@@ -59,10 +59,6 @@ class Session extends Actor
     # If hCommand, execute it
     if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
       switch hMessage.payload.cmd
-        when "start"
-          @start()
-        when "stop"
-          @stop()
         when "hCreateUpdateChannel"
           command = require("./../hcommands/hCreateUpdateChannel").Command
           module = new command()
@@ -155,7 +151,7 @@ class Session extends Actor
 
     @on "disconnect", ->
       @emit "hStatus", {status:statuses.DISCONNECTING, errorCode:errors.NO_ERROR}
-      @stop()
+      @h_tearDown()
     #Start listening for messages from Session and relaying them
     #client.hClient.on "hMessage", (hMessage) ->
     #  log.info "Sent message to client " + client.id, hMessage

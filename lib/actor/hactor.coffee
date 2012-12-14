@@ -51,7 +51,7 @@ class Actor extends EventEmitter
   #Init logger
   logger.exitOnError = false
   logger.remove(logger.transports.Console)
-  logger.add(logger.transports.Console, {handleExceptions: true, level: "debug"})
+  logger.add(logger.transports.Console, {handleExceptions: true, level: "INFO"})
   logger.add(logger.transports.File, {handleExceptions: true, filename: "#{__dirname}/../../log/hActor.log", level: "debug"})
 
   # Possible running states of an actor
@@ -135,13 +135,21 @@ class Actor extends EventEmitter
         else
           #Complete missing values (msgid added later)
           hMessage.convid = (if not hMessage.convid or hMessage.convid is hMessage.msgid then hMessage.msgid else hMessage.convid)
-          hMessage.published = hMessage.published or new Date()
+          hMessage.published = hMessage.published or new Date().getTime()
 
           #Empty location and headers should not be sent/saved.
           validator.cleanEmptyAttrs hMessage, ["headers", "location"]
 
+          if hMessage.type is "hSignal" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
+            switch hMessage.payload.cmd
+              when "start"
+                @h_init()
+              when "stop"
+                @h_tearDown()
+              else
+                @h_onSignal
           #Check if hMessage respect filter
-          checkValidity = @checkFilter(hMessage)
+          checkValidity = @validateFilter(hMessage)
           if checkValidity.result is true
             @onMessage hMessage, cb
           else
@@ -153,16 +161,12 @@ class Actor extends EventEmitter
 
   onMessage: (hMessage, cb) ->
     @log "info", "Message reveived: #{JSON.stringify(hMessage)}"
-    if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
-      switch hMessage.payload.cmd
-        when "start"
-          @start()
-        when "stop"
-          @stop()
-    else
-      if hMessage.timeout > 0
-        hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.OK, "")
-        cb hMessageResult
+    if hMessage.timeout > 0
+      hMessageResult = @buildResult(hMessage.publisher, hMessage.msgid, codes.hResultStatus.OK, "")
+      cb hMessageResult
+
+  h_onSignal: (hMessage, cb) ->
+    # Method to override
 
   send: (hMessage, cb) ->
     unless _.isString(hMessage.actor)
@@ -242,6 +246,7 @@ class Actor extends EventEmitter
 
       #Send it to transport
       @log "debug", "Sending message: #{JSON.stringify(hMessage)}"
+      hMessage.sent = new Date().getTime()
       outboundAdapter.send hMessage
     else if cb
       actor = hMessage.actor or "Unknown"
@@ -273,14 +278,14 @@ class Actor extends EventEmitter
         @outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: properties.actor , ref: childRef)
         childRef.outboundAdapters.push adapters.outboundAdapter(method, owner: childRef, targetActorAid: @actor , ref: @)
         # Starting the child
-        @send @buildMessage(properties.actor, "hCommand",  CMD_START, {persistent:false})
+        @send @buildMessage(properties.actor, "hSignal",  CMD_START, {persistent:false})
 
       when "fork"
         childRef = forker.fork __dirname+"/childlauncher", [classname , JSON.stringify(properties)]
         @outboundAdapters.push adapters.outboundAdapter(method, owner: @, targetActorAid: properties.actor , ref: childRef)
         childRef.on "message", (msg) =>
           if msg.state is 'ready'
-            msg = @buildMessage(properties.actor, "hCommand", CMD_START, {persistent:false})
+            msg = @buildMessage(properties.actor, "hSignal", CMD_START, {persistent:false})
             @send msg
       else
         throw new Error "Invalid method"
@@ -345,23 +350,45 @@ class Actor extends EventEmitter
   ###*
     Function that starts the actor, including its inbound adapters
   ###
-  start: ->
+  h_init: () ->
     @setStatus STATUS_STARTING
+    @preStart () =>
+        @h_start () =>
+          @postStart()
+
+  preStart: (done) ->
+    done()
+
+  h_start: (done)->
     _.invoke @inboundAdapters, "start"
     _.invoke @outboundAdapters, "start"
+    done()
+
+  postStart: ->
     @setStatus STATUS_STARTED
 
   ###*
     Function that stops the actor, including its children and adapters
   ###
-  stop: ->
+  h_tearDown: () ->
+    @preStop () =>
+      @h_stop () =>
+        @postStop()
+
+  preStop: (done) ->
     @setStatus STATUS_STOPPING
+    done()
+
+  h_stop: (done) ->
     # Stop children first
     _.forEach @children, (childAid) =>
-      @send @buildMessage(childAid, "hCommand", CMD_STOP, {persistent:false})
+      @send @buildMessage(childAid, "hSignal", CMD_STOP, {persistent:false})
     # Stop adapters second
     _.invoke @inboundAdapters, "stop"
     _.invoke @outboundAdapters, "stop"
+    done()
+
+  postStop: ->
     @setStatus STATUS_STOPPED
     @removeAllListeners()
 
@@ -377,7 +404,7 @@ class Actor extends EventEmitter
     else
       return {status: codes.hResultStatus.INVALID_ATTR, result: checkFormat.error}
 
-  checkFilter: (hMessage) ->
+  validateFilter: (hMessage) ->
     return hFilter.checkFilterValidity(hMessage, @filter)
 
   removePeer: (actor) ->
@@ -396,8 +423,8 @@ class Actor extends EventEmitter
       throw new Error("missing actor")
     hMessage.publisher = @actor
     hMessage.msgid = UUID.generate()
-    hMessage.published = hMessage.published or new Date()
-    hMessage.sent = new Date()
+    hMessage.published = hMessage.published or new Date().getTime()
+    hMessage.sent = new Date().getTime()
     hMessage.actor = actor
     hMessage.ref = options.ref  if options.ref
     hMessage.convid = options.convid  if options.convid
@@ -405,8 +432,8 @@ class Actor extends EventEmitter
     hMessage.priority = options.priority  if options.priority
     hMessage.relevance = options.relevance  if options.relevance
     if options.relevanceOffset
-      currentDate = new Date()
-      hMessage.relevance = new Date(currentDate.getTime() + options.relevanceOffset)
+      currentDate = new Date().getTime()
+      hMessage.relevance = new Date(currentDate + options.relevanceOffset).getTime()
     if options.persistent isnt null or options.persistent isnt undefined
       hMessage.persistent = options.persistent
     if hMessage.persistent is null or hMessage.persistent is undefined
@@ -428,7 +455,7 @@ class Actor extends EventEmitter
     hmessage.type = "hResult"
     hmessage.priority = 0
     hmessage.publisher = @actor
-    hmessage.published = new Date()
+    hmessage.published = new Date().getTime()
     hresult = {}
     hresult.status = status
     hresult.result = result

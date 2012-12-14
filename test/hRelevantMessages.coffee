@@ -44,7 +44,7 @@ describe "hRelevantMessages", ->
     hActor = actorModule.newActor(topology)
 
   after () ->
-    hActor.stop()
+    hActor.h_tearDown()
     hActor = null
 
   before (done) ->
@@ -60,7 +60,7 @@ describe "hRelevantMessages", ->
         publishMsg = config.makeHMessage activeChan, hActor.actor, "string", {}
         publishMsg.timeout = 0
         publishMsg.persistent = true
-        publishMsg.relevance = new Date(new Date().getTime() + 100000)
+        publishMsg.relevance = new Date(new Date().getTime() + 100000).getTime()
         hActor.send publishMsg
         nbOfPublish++
         i++
@@ -70,7 +70,7 @@ describe "hRelevantMessages", ->
         publishMsg = config.makeHMessage activeChan, hActor.actor, "string", {}
         publishMsg.timeout = 0
         publishMsg.persistent = true
-        publishMsg.relevance = new Date(new Date().getTime() - 100000)
+        publishMsg.relevance = new Date(new Date().getTime() - 100000).getTime()
         hActor.send publishMsg
         nbOfPublish++
         i++
@@ -166,7 +166,7 @@ describe "hRelevantMessages", ->
 
       i = 0
       while i < hMessage.payload.result.length
-        hMessage.payload.result[i].relevance.getTime().should.be.above new Date().getTime()
+        hMessage.payload.result[i].relevance.should.be.above new Date().getTime()
         i++
       done()
 
@@ -187,7 +187,7 @@ describe "hRelevantMessages", ->
         publishMsg = config.makeHMessage activeChan, hActor.actor, "string", {}
         publishMsg.timeout = 0
         publishMsg.persistent = true
-        publishMsg.relevance = new Date(new Date().getTime() + 100000)
+        publishMsg.relevance = new Date(new Date().getTime() + 100000).getTime()
         publishMsg.author = "u2@localhost"
         hActor.send publishMsg
         i++

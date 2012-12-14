@@ -46,7 +46,7 @@ hRelevantMessages::exec = (hMessage, context, cb) ->
       hMessages = []
       dbPool.getDb "admin", (dbInstance) ->
         stream = dbInstance.get(channel).find(relevance:
-          $gte: new Date()).sort(published: -1).skip(0).stream()
+          $gte: new Date().getTime()).sort(published: -1).skip(0).stream()
         stream.on "data", (localhMessage) ->
           localhMessage.msgid = localhMessage._id
           delete hMessage._id
@@ -67,20 +67,10 @@ hRelevantMessages::validateCmd = (hMessage, context, cb) ->
     return cb(status.MISSING_ATTR, "missing actor")
   unless validator.isChannel(actor)
     return cb(status.INVALID_ATTR, "actor is not a channel")
-
-  channel = undefined
-  dbPool.getDb "admin", (dbInstance) ->
-    stream = dbInstance.get("hChannels").find(_id: actor).streamRecords()
-    stream.on "data", (hChannel) ->
-      channel = hChannel
-
-    stream.on "end", ->
-      unless channel
-        return cb(status.NOT_AVAILABLE, "the channel actor was not found")
-      unless channel.active
-        return cb(status.NOT_AUTHORIZED, "the channel actor is inactive")
-      if channel.subscribers.indexOf(validator.getBareJID(hMessage.publisher)) < 0
-        return cb(status.NOT_AUTHORIZED, "error recovering messages with current credentials")
-      cb()
+  unless context.properties.active
+    return cb(status.NOT_AUTHORIZED, "the channel actor is inactive")
+  if context.properties.subscribers.indexOf(validator.getBareJID(hMessage.publisher)) < 0
+    return cb(status.NOT_AUTHORIZED, "error recovering messages with current credentials")
+  cb()
 
 exports.Command = hRelevantMessages

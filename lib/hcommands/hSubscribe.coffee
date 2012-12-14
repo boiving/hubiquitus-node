@@ -22,42 +22,47 @@
 # *    You should have received a copy of the MIT License along with Hubiquitus.
 # *    If not, see <http://opensource.org/licenses/mit-license.php>.
 #
-
-fs = require "fs"
-adapters = require "./adapters"
-{Actor} = require "./actor/hactor"
-os = require "os"
+log = require("winston")
+status = require("../codes").hResultStatus
+validators = require("../validator")
 _ = require "underscore"
-opts = require "./options.coffee"
-
-createActor = (properties) ->
-  actorModule = require "#{__dirname}/actor/#{properties.type}"
-  actor = actorModule.newActor(properties)
-
-main = ->
-
-  hTopology = `undefined`
-  try
-    hTopology = eval("(" + fs.readFileSync("./conf/conf.json", "utf8") + ")")
-  catch err
-    console.log "erreur : ",err
-  unless hTopology
-    console.log "No config file or malformated config file. Can not start actor"
-    process.exit 1
 
 
-  mockActor = { actor: "process"+process.pid }
+hSubscribe = ->
 
-  engine = createActor(hTopology)
 
-  engine.on "started", ->
-    _.forEach ["SIGINT"], (signal) ->
-      process.on signal, ->
-        engine.h_tearDown()
-        process.exit()
-     #   clearInterval interval
+  ###
+  Subscribes a publisher to a channel
+  @param hMessage - hMessage with hCommand received with cmd = 'hSubscribe'
+  @param context - Auxiliary functions,attrs from the controller.
+  @param cb(status, result) - function that receives args:
+  status: //Constant from var status to indicate the result of the hCommand
+  result: undefined if ok.
+  ###
+hSubscribe::exec = (hMessage, context, cb) ->
+  statusValue = null
+  result = null
+  actor = hMessage.actor
+  return cb(status.MISSING_ATTR, "missing actor")  unless actor
+  return cb(status.INVALID_ATTR, "actor is not a channel")  unless validators.isChannel(actor)
 
-  # starting engine
-  engine.h_init()
+  #Convert sender to bare jid
+  jid = hMessage.publisher.replace(/\/.*/, "")
+  if context.properties.active is false
+    statusValue = status.NOT_AUTHORIZED
+    result = "the channel is inactive"
 
-main()
+    #Check if in subscribers list
+  else if context.properties.subscribers.indexOf(jid) < 0
+    statusValue = status.NOT_AUTHORIZED
+    result = "not allowed to subscribe to \"" + actor + "\""
+
+  else
+    statusValue = status.OK
+    _.forEach context.outboundAdapters, (outbound) =>
+      if outbound.targetActorAid is context.subscribersAlias
+        result = outbound.url
+
+  cb statusValue, result
+
+exports.Command = hSubscribe

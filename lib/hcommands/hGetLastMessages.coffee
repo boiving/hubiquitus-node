@@ -63,43 +63,34 @@ hGetLastMessages::exec = (hMessage, context, cb) ->
     return cb(status.INVALID_ATTR, "actor is not a channel")
   sender = hMessage.publisher.replace(/\/.*/, "")
   quant = @quant
-  channel = undefined
 
-  dbPool.getDb "admin", (dbInstance) ->
-    stream = dbInstance.get("hChannels").find(_id: hMessage.actor).streamRecords()
-    stream.on "data", (hChannel) ->
-      channel = hChannel
+  if context.properties.active is false
+    return cb status.NOT_AUTHORIZED, "the channel is inactive"
 
-    stream.on "end", ->
-      unless channel
-        return cb(status.NOT_AVAILABLE, "the channel does not exist")
-      if channel.active is false
-        return cb status.NOT_AUTHORIZED, "the channel is inactive"
+  if context.properties.subscribers.indexOf(sender) > -1 and context.properties.active is true
+    if context.properties.headers
+      quant = params.nbLastMsg or context.properties.headers["MAX_MSG_RETRIEVAL"] or quant #In case header mal format
+    else
+      quant = params.nbLastMsg or quant
 
-      if channel.subscribers.indexOf(sender) > -1 and channel.active is true
-        if channel.headers
-          quant = params.nbLastMsg or channel.headers["MAX_MSG_RETRIEVAL"] or quant #In case header mal format
-        else
-          quant = params.nbLastMsg or quant
+    #Test if quant field by the user is a number
+    quant = parseInt(quant)
+    quant = (if isNaN(quant) then @quant else quant)
 
-        #Test if quant field by the user is a number
-        quant = parseInt(quant)
-        quant = (if isNaN(quant) then @quant else quant)
+    hMessages = []
+    dbPool.getDb "admin", (dbInstance) ->
+      stream = dbInstance.get(context.actor).find({}).sort(published: -1).skip(0).stream()
+      stream.on "data", (localhMessage) ->
+        hMessages.actor = localhMessage._id
+        delete localhMessage._id
 
-        hMessages = []
-        dbPool.getDb "admin", (dbInstance) ->
-          stream = dbInstance.get(channel._id).find({}).sort(published: -1).skip(0).stream()
-          stream.on "data", (localhMessage) ->
-            hMessages.actor = localhMessage._id
-            delete localhMessage._id
+        if localhMessage and hFilter.checkFilterValidity(localhMessage, params.filter).result
+          hMessages.push localhMessage
+          stream.destroy()  if --quant is 0
 
-            if localhMessage and hFilter.checkFilterValidity(localhMessage, params.filter).result
-              hMessages.push localhMessage
-              stream.destroy()  if --quant is 0
-
-          stream.on "close", ->
-            cb status.OK, hMessages
-      else
-        cb status.NOT_AUTHORIZED, "not authorized to retrieve messages from \"" + actor
+      stream.on "close", ->
+        cb status.OK, hMessages
+  else
+    cb status.NOT_AUTHORIZED, "not authorized to retrieve messages from \"" + actor
 
 exports.Command = hGetLastMessages

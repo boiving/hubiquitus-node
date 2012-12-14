@@ -44,7 +44,7 @@ describe "hGetThread", ->
     hActor = actorModule.newActor(topology)
 
   after () ->
-    hActor.stop()
+    hActor.h_tearDown()
     hActor = null
 
   before (done) ->
@@ -76,7 +76,7 @@ describe "hGetThread", ->
     publishMsg = config.makeHMessage activeChannel, hActor.actor, "string", {}
     publishMsg.timeout = 0
     publishMsg.persistent = true
-    publishMsg.published = new Date()
+    publishMsg.published = new Date().getTime()
     convid = publishMsg.msgid
     hActor.send publishMsg
     publishedMessages++
@@ -86,7 +86,7 @@ describe "hGetThread", ->
       publishMsg = config.makeHMessage activeChannel, hActor.actor, "string", {}
       publishMsg.timeout = 0
       publishMsg.persistent = true
-      publishMsg.published = new Date()
+      publishMsg.published = new Date().getTime()
       publishMsg.convid = convid
       hActor.send publishMsg
       publishedMessages++
@@ -241,7 +241,7 @@ describe "hGetThread", ->
       publishMsg = config.makeHMessage activeChannel, hActor.actor, "a type", {}
       publishMsg.timeout = 0
       publishMsg.persistent = true
-      publishMsg.published = new Date()
+      publishMsg.published = new Date().getTime()
       publishMsg.convid = convid
       hActor.send publishMsg
       publishedMessages++
@@ -251,7 +251,7 @@ describe "hGetThread", ->
         publishMsg = config.makeHMessage activeChannel, hActor.actor, "a type", {}
         publishMsg.timeout = 0
         publishMsg.persistent = true
-        publishMsg.published = new Date()
+        publishMsg.published = new Date().getTime()
         publishMsg.convid = convid2
         hActor.send publishMsg
         filterMessagesPublished++
@@ -262,7 +262,7 @@ describe "hGetThread", ->
         publishMsg = config.makeHMessage activeChannel, hActor.actor, "another type", {}
         publishMsg.timeout = 0
         publishMsg.persistent = true
-        publishMsg.published = new Date()
+        publishMsg.published = new Date().getTime()
         publishMsg.convid = convid2
         hActor.send publishMsg
         filterMessagesPublished++

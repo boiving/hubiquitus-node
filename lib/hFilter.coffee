@@ -419,7 +419,7 @@ exports.checkFilterValidity = (hMessage, hCondition) ->
               error: "Attribute of operand \"relevant\" must be a boolean"
             )
           if filter.relevant is true
-            if new Date() <= new Date(hMessage.relevance)
+            if new Date().getTime() <= hMessage.relevance
               return {
                 result: true
                 error: ""
@@ -429,7 +429,7 @@ exports.checkFilterValidity = (hMessage, hCondition) ->
                 result: false
                 error: "hCondition " + filter + " is not validate"
               }
-          else if new Date() > new Date(hMessage.relevance)
+          else if new Date().getTime() > new Date(hMessage.relevance)
             return {
               result: true
               error: ""

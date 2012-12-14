@@ -44,7 +44,7 @@ describe "hGetLastMessages", ->
     hActor = actorModule.newActor(topology)
 
   after () ->
-    hActor.stop()
+    hActor.h_tearDown()
     hActor = null
 
   before (done) ->
@@ -113,7 +113,7 @@ describe "hGetLastMessages", ->
     i = 0
     while i < 10
       count = 0
-      date = new Date(100000 + i * 100000)
+      date = new Date(100000 + i * 100000).getTime()
       DateTab.push date
       before ->
         publishMsg = config.makeHMessage existingCHID, hActor.actor, "string", {}
@@ -255,7 +255,7 @@ describe "hGetLastMessages", ->
         i = 0
         while i < 5
           count = 0
-          date = new Date(100000 + i * 100000)
+          date = new Date(100000 + i * 100000).getTime()
           DateTab.push date
           publishMsg = config.makeHMessage existingCHID, hActor.actor, "string", {}
           publishMsg.timeout = 0

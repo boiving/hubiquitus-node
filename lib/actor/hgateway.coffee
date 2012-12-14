@@ -42,16 +42,8 @@ class Gateway extends Actor
       socketIO.socketIO(adapterProps)
 
   onMessage: (hMessage) ->
-    # If hCommand, execute it
-    if hMessage.type is "hCommand" and validator.getBareJID(hMessage.actor) is validator.getBareJID(@actor)
-      switch hMessage.payload.cmd
-        when "start"
-          @start()
-        when "stop"
-          @stop()
-    else
-      @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
-      @send hMessage
+    @log "debug", "Gateway received a message to send to #{hMessage.actor}: #{JSON.stringify(hMessage)}"
+    @send hMessage
 
 
 exports.Gateway = Gateway

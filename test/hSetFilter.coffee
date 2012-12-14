@@ -38,7 +38,7 @@ describe "hSetFilter", ->
     hActor = actorModule.newActor(topology)
 
   after () ->
-    hActor.stop()
+    hActor.h_tearDown()
 
   beforeEach ->
     cmd = config.makeHMessage(hActor.actor, config.logins[0].jid, "hCommand", {})

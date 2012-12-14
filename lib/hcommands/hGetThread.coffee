@@ -81,20 +81,10 @@ hGetThread::checkValidity = (hMessage, context, cb) ->
     return cb(status.INVALID_ATTR, "actor is not a channel")
   unless typeof convid is "string"
     return cb(status.INVALID_ATTR, "convid is not a string")
-
-  channel = undefined
-  dbPool.getDb "admin", (dbInstance) ->
-    stream = dbInstance.get("hChannels").find(_id: actor).streamRecords()
-    stream.on "data", (hChannel) ->
-      channel = hChannel
-
-    stream.on "end", ->
-      unless channel
-        return cb(status.NOT_AVAILABLE, "the channel " + actor + " was not found")
-      unless channel.active
-        return cb(status.NOT_AUTHORIZED, "the channel " + actor + " is inactive")
-      if channel.subscribers.indexOf(validator.getBareJID(hMessage.publisher)) < 0
-        return cb(status.NOT_AUTHORIZED, "the sender is not in the channel subscribers list")
-      cb()
+  unless context.properties.active
+    return cb(status.NOT_AUTHORIZED, "the channel " + actor + " is inactive")
+  if context.properties.subscribers.indexOf(validator.getBareJID(hMessage.publisher)) < 0
+    return cb(status.NOT_AUTHORIZED, "the sender is not in the channel subscribers list")
+  cb()
 
 exports.Command = hGetThread
